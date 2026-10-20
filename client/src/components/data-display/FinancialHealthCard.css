@@ -1,0 +1,144 @@
+/* ── Financial Health Card ────────────────────────────────────────────── */
+
+.health-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+}
+
+.health-card-compact {
+  flex-direction: row;
+  text-align: left;
+  gap: var(--space-5);
+}
+
+/* ── SVG Ring ──────────────────────────────────────────────────────── */
+
+.health-ring-section {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.health-ring {
+  transform: rotate(-90deg);
+}
+
+.health-ring-progress {
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.health-ring-label {
+  position: absolute;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.health-score {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.health-score-max {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium);
+}
+
+.health-card-compact .health-score {
+  font-size: var(--text-xl);
+}
+
+/* ── Meta / Status ─────────────────────────────────────────────────── */
+
+.health-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.health-card-compact .health-meta {
+  flex: 1;
+}
+
+.health-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.health-card-compact .health-title {
+  font-size: var(--text-base);
+}
+
+.health-status-badge {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  width: fit-content;
+}
+
+.health-card-compact .health-status-badge {
+  font-size: 0.6875rem;
+}
+
+/* ── Factors List (full mode only) ─────────────────────────────────── */
+
+.health-factors {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  text-align: left;
+}
+
+.health-factor {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-hover);
+  transition: background-color 0.2s ease;
+}
+
+.health-factor:hover {
+  background: var(--bg-surface-active);
+}
+
+.health-factor-icon {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.health-factor-text {
+  line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .health-card-compact {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .health-card-compact .health-meta {
+    align-items: center;
+  }
+}

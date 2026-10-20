@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Font Sizes */
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.875rem;    /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.5rem;     /* 24px */
+  --text-3xl: 1.875rem;   /* 30px */
+  
+  /* Font Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Spacing */
+  --space-1: 0.25rem;     /* 4px */
+  --space-2: 0.5rem;      /* 8px */
+  --space-3: 0.75rem;     /* 12px */
+  --space-4: 1rem;        /* 16px */
+  --space-5: 1.25rem;     /* 20px */
+  --space-6: 1.5rem;      /* 24px */
+  --space-8: 2rem;        /* 32px */
+  --space-10: 2.5rem;     /* 40px */
+  --space-12: 3rem;       /* 48px */
+  --space-16: 4rem;       /* 64px */
+
+  /* Border Radii (Apple-inspired rounded corners) */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Universal Brand Colors */
+  --color-brand: #6C5CE7;
+  --color-brand-hover: #5A4BCC;
+  --color-success: #00C896;
+  --color-warning: #FFB800;
+  --color-danger: #FF5A5F;
+  --color-danger-hover: #E04D52;
+
+  /* Light Theme (Default) */
+  --bg-root: #F2F2F7;         /* iOS grouped background */
+  --bg-surface: #FFFFFF;
+  --bg-surface-hover: #F9F9FB;
+  --bg-surface-active: #F0F0F5;
+  
+  --text-primary: #1C1C1E;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #C7C7CC;
+  
+  --border-subtle: #E5E5EA;
+  --border-strong: #D1D1D6;
+
+  /* Shadows - Light */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Dark Theme */
+html[data-theme="dark"] {
+  --bg-root: #000000;         /* True black for OLED / iOS dark mode feel */
+  --bg-surface: #1C1C1E;      /* Elevated surface */
+  --bg-surface-hover: #2C2C2E;
+  --bg-surface-active: #3A3A3C;
+  
+  --text-primary: #FFFFFF;
+  --text-secondary: #EBEBF599; /* 60% opacity white */
+  --text-tertiary: #EBEBF54D;  /* 30% opacity white */
+  
+  --border-subtle: #38383A;
+  --border-strong: #48484A;
+
+  /* Shadows - Dark (Subtler on dark backgrounds) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.5);
+}

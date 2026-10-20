@@ -1,0 +1,85 @@
+.goals-widget-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.goals-widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.goals-widget-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.goals-widget-icon {
+  font-size: var(--text-xl);
+}
+
+.goals-widget-link {
+  font-size: var(--text-sm);
+  color: var(--color-brand);
+  text-decoration: none;
+  font-weight: var(--weight-medium);
+}
+
+.goals-widget-link:hover {
+  text-decoration: underline;
+}
+
+.goals-widget-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.goals-widget-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.goals-widget-item-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+}
+
+.goals-widget-item-title {
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+.goals-widget-item-amounts {
+  color: var(--text-secondary);
+}
+
+.widget-track {
+  height: 6px;
+  background-color: var(--color-success); /* Green track */
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.widget-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.widget-fill.active {
+  background: var(--color-danger); /* Red filling */
+}
+
+.widget-fill.completed {
+  background: var(--color-success);
+}

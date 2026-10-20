@@ -1,0 +1,73 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6); /* Deeper slate overlay */
+  backdrop-filter: blur(8px); /* Stronger glassmorphism effect */
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--space-6);
+  transition: all 0.3s ease;
+}
+
+.modal-content {
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-2xl); /* Softer corners */
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* More elevated shadow */
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle inner border for glass effect */
+}
+
+.modal-header {
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: none; /* Seamless integration with body */
+}
+
+.modal-title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  margin: 0;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: var(--text-2xl);
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-surface-active);
+}
+
+.modal-body {
+  padding: 0 var(--space-6) var(--space-6);
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: var(--space-5) var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+  background-color: var(--bg-root); /* Slight contrast from body */
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

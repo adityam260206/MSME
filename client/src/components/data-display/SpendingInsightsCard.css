@@ -1,0 +1,94 @@
+/* ── Spending Insights Card ───────────────────────────────────────────── */
+
+.insights-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.insights-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.insights-title-icon {
+  font-size: var(--text-xl);
+}
+
+/* ── Insights List ────────────────────────────────────────────────────── */
+
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.insight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border-left: 3px solid transparent;
+  background: var(--bg-surface-hover);
+  animation: insightSlideIn 0.3s ease-out both;
+  transition: transform 0.15s ease, background-color 0.2s ease;
+}
+
+.insight-item:hover {
+  transform: translateX(4px);
+  background: var(--bg-surface-active);
+}
+
+/* Color coding by type */
+.insight-positive {
+  border-left-color: var(--color-success);
+}
+
+.insight-info {
+  border-left-color: var(--color-brand);
+}
+
+.insight-warning {
+  border-left-color: var(--color-warning);
+}
+
+.insight-icon {
+  flex-shrink: 0;
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+.insight-text {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* "More" link */
+.insights-more {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-align: center;
+  font-weight: var(--weight-medium);
+}
+
+/* ── Animation ────────────────────────────────────────────────────────── */
+
+@keyframes insightSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

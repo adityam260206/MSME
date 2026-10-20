@@ -1,0 +1,107 @@
+.page-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.page-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.page-subtitle {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.tx-table-wrapper {
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.tx-category-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: var(--weight-medium);
+}
+
+.tx-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.tx-amount {
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums; /* Keeps numbers perfectly aligned in columns */
+}
+
+.text-success {
+  color: var(--color-success);
+}
+
+.tx-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+/* Show actions only on hover to keep table clean */
+.table tbody tr:hover .tx-actions {
+  opacity: 1;
+}
+
+.tx-action-btn {
+  background: transparent;
+  border: none;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  opacity: 0.6;
+}
+
+.tx-action-btn:hover {
+  opacity: 1;
+  background-color: var(--bg-surface-active);
+}
+
+.tx-delete-btn:hover {
+  background-color: rgba(255, 71, 87, 0.1);
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  
+  .tx-table-wrapper {
+    padding: var(--space-4) 0; /* Remove padding so table edge touches screen on mobile */
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+  
+  .tx-actions {
+    opacity: 1; /* Always show actions on mobile since no hover */
+  }
+}
