@@ -1,6 +1,6 @@
 import { useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Moon, Sun, LogOut, CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Bell, Moon, Sun, LogOut, CheckCircle } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { ThemeContext } from '../../context/ThemeContext';
 import api from '../../api/client';

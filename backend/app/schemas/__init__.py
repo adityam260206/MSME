@@ -23,6 +23,17 @@ from backend.app.schemas.employee import (
 from backend.app.schemas.alert import AlertResponse
 from backend.app.schemas.analytics import (
     DashboardSummaryResponse, SalesAnalyticsResponse, InventoryAnalyticsResponse,
+    ReplenishmentPlanItem, ReplenishmentPlanResponse,
+    AnomalyItem, AnomalyReportResponse,
+    ProductProfitabilityItem, ProfitabilityAnalyticsResponse,
+    CashFlowItem, CashFlowProjectionResponse,
+    ActionCenterItem, ActionCenterResponse,
+)
+from backend.app.schemas.goal import (
+    BusinessGoalCreate, BusinessGoalUpdate, BusinessGoalResponse, BusinessGoalProgress,
+)
+from backend.app.schemas.ai import (
+    ChatMessage, AINavigationReference, AIChatRequest, AIChatResponse, AICopilotStatus,
 )
 from backend.app.schemas.report import SalesReportRequest, SalesReportResponse, SalesReportItem, SalesReportSummary
 

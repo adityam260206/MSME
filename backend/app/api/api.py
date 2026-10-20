@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from backend.app.api.routers import (
     auth, users, catalog, inventory, suppliers,
     purchases, customers, sales, finance, employees,
-    dashboard, analytics, alerts, reports
+    dashboard, analytics, alerts, reports, ai
 )
 
 api_router = APIRouter()
@@ -21,3 +21,4 @@ api_router.include_router(dashboard.router)
 api_router.include_router(analytics.router)
 api_router.include_router(alerts.router)
 api_router.include_router(reports.router)
+api_router.include_router(ai.router)

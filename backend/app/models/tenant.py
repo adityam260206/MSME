@@ -31,6 +31,7 @@ class Tenant(Base):
     financial_transactions = relationship("FinancialTransaction", back_populates="tenant", cascade="all, delete-orphan")
     employees = relationship("Employee", back_populates="tenant", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="tenant", cascade="all, delete-orphan")
+    goals = relationship("BusinessGoal", back_populates="tenant", cascade="all, delete-orphan")
 
 class Role(Base):
     __tablename__ = "roles"

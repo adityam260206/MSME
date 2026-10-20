@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import ChatWidget from './ChatWidget';
+import AICopilotDrawer from '../ai/AICopilotDrawer';
 import './AppShell.css';
 
 /**
@@ -18,7 +18,7 @@ export default function AppShell() {
           <Outlet />
         </main>
       </div>
-      <ChatWidget />
+      <AICopilotDrawer />
     </div>
   );
 }

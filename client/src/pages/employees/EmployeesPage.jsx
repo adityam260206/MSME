@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { Briefcase, Plus, Edit2, UserX, Lock, Mail, Building } from 'lucide-react';
+import { Plus, Edit2, UserX, Lock, Building } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { ToastContext } from '../../context/ToastContext';
 import Card from '../../components/ui/Card';

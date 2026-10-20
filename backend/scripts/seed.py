@@ -12,7 +12,8 @@ from backend.app.db.session import engine, SessionLocal
 from backend.app.models import (
     Tenant, Role, User, Category, Product, Supplier,
     Customer, Purchase, PurchaseItem, Sale, SaleItem,
-    StockMovement, FinancialTransaction, Employee, Alert
+    StockMovement, FinancialTransaction, Employee, Alert,
+    BusinessGoal
 )
 
 DEMO_TENANT_ID = "demo-tenant-msme360-001"
@@ -391,6 +392,24 @@ def seed_database():
             db.add_all([a1, a2])
             db.commit()
             print("Created Low Stock and Out of Stock Alerts")
+
+        # 12. Seed Business Goal for current month
+        curr_month = datetime.now(timezone.utc).strftime("%Y-%m")
+        existing_goal = db.query(BusinessGoal).filter(
+            BusinessGoal.tenant_id == DEMO_TENANT_ID,
+            BusinessGoal.target_month == curr_month,
+        ).first()
+        if not existing_goal:
+            demo_goal = BusinessGoal(
+                tenant_id=DEMO_TENANT_ID,
+                target_month=curr_month,
+                target_revenue=Decimal("50000.00"),
+                target_sales_volume=25,
+                notes="Target for current operational month",
+            )
+            db.add(demo_goal)
+            db.commit()
+            print(f"Created Business Goal for month {curr_month}: INR 50,000 / 25 sales")
 
         print("\n=== Demo Seed Completed Successfully! ===")
         print("Demo Credentials:")

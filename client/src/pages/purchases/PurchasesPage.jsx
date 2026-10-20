@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Truck, Plus, Search, RotateCcw, Eye, FileText, CheckCircle } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { ToastContext } from '../../context/ToastContext';
@@ -11,6 +12,7 @@ import api from '../../api/client';
 export default function PurchasesPage() {
   const { role } = useContext(AuthContext);
   const { showToast } = useContext(ToastContext);
+  const location = useLocation();
 
   const [purchases, setPurchases] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -54,6 +56,23 @@ export default function PurchasesPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.prefillItem && products.length > 0) {
+      const it = location.state.prefillItem;
+      if (it.supplier_id) setSelectedSupplierId(it.supplier_id);
+      else if (suppliers.length > 0) setSelectedSupplierId(suppliers[0].id);
+
+      setPurchaseItems([
+        {
+          product_id: it.product_id,
+          quantity: it.quantity || 10,
+          unit_cost: it.unit_cost || '',
+        }
+      ]);
+      setIsNewPurchaseModalOpen(true);
+    }
+  }, [location.state, products, suppliers]);
 
   const handleAddItemRow = () => {
     setPurchaseItems([...purchaseItems, { product_id: '', quantity: 1, unit_cost: '' }]);

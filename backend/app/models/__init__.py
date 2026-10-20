@@ -9,6 +9,7 @@ from backend.app.models.sale import Sale, SaleItem
 from backend.app.models.finance import FinancialTransaction
 from backend.app.models.employee import Employee
 from backend.app.models.alert import Alert
+from backend.app.models.goal import BusinessGoal
 
 __all__ = [
     "Tenant",
@@ -26,4 +27,5 @@ __all__ = [
     "FinancialTransaction",
     "Employee",
     "Alert",
+    "BusinessGoal",
 ]
