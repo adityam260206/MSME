@@ -1,25 +1,22 @@
 import { createContext, useState, useEffect, useCallback } from 'react';
-import api from '../api/client'; // Note: Will be created in Step 18
+import api from '../api/client';
 
 export const AuthContext = createContext(null);
 
-/**
- * Auth Provider.
- * Holds the current user state, checks for existing token on mount,
- * and provides login/logout methods globally.
- */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem('spendsense-token'));
+  const [token, setToken] = useState(() => localStorage.getItem('msme360-token'));
+  const [capabilities, setCapabilities] = useState([]);
+  const [tenantId, setTenantId] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Sync token to localStorage and configure Axios default headers
+  // Sync token with localStorage and Axios header
   useEffect(() => {
     if (token) {
-      localStorage.setItem('spendsense-token', token);
+      localStorage.setItem('msme360-token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } else {
-      localStorage.removeItem('spendsense-token');
+      localStorage.removeItem('msme360-token');
       delete api.defaults.headers.common['Authorization'];
     }
   }, [token]);
@@ -34,12 +31,17 @@ export function AuthProvider({ children }) {
 
       try {
         const { data } = await api.get('/auth/me');
-        setUser(data.data.user);
+        if (data.success && data.data) {
+          setUser(data.data.user);
+          setCapabilities(data.data.capabilities || []);
+          setTenantId(data.data.tenant_id);
+        }
       } catch (error) {
-        // Token invalid or expired
-        console.error('Failed to load user profile:', error);
+        console.error('Session expired or invalid token:', error.message);
         setToken(null);
         setUser(null);
+        setCapabilities([]);
+        setTenantId(null);
       } finally {
         setIsInitializing(false);
       }
@@ -48,18 +50,35 @@ export function AuthProvider({ children }) {
     loadUser();
   }, [token]);
 
-  const login = useCallback((userData, jwtToken) => {
+  const login = useCallback((userData, jwtToken, userCaps = []) => {
     setToken(jwtToken);
     setUser(userData);
+    setCapabilities(userCaps);
+    setTenantId(userData?.tenant_id || null);
   }, []);
 
   const logout = useCallback(() => {
     setToken(null);
     setUser(null);
+    setCapabilities([]);
+    setTenantId(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, isInitializing, login, logout, setUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        role: user?.role,
+        token,
+        tenantId,
+        capabilities,
+        isAuthenticated: !!user,
+        isInitializing,
+        login,
+        logout,
+        setUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

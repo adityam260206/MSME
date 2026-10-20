@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: msme360-db
+    restart: always
+    environment:
+      POSTGRES_DB: msme360
+      POSTGRES_USER: msme_user
+      POSTGRES_PASSWORD: msme_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: msme360-backend
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://msme_user:msme_password@db:5432/msme360
+      SECRET_KEY: msme360_production_super_secret_jwt_key_at_least_32_chars
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

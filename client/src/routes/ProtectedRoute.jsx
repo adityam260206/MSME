@@ -3,12 +3,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import Skeleton from '../components/feedback/Skeleton';
 
-/**
- * Route guard that redirects unauthenticated users to the login page.
- * While the initial authentication check is happening, it shows a loading skeleton.
- */
-export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, isInitializing } = useContext(AuthContext);
+export default function ProtectedRoute({ children, allowedRoles }) {
+  const { isAuthenticated, isInitializing, role } = useContext(AuthContext);
   const location = useLocation();
 
   if (isInitializing) {
@@ -22,9 +18,33 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!isAuthenticated) {
-    // Redirect them to the login page, but save the current location they were
-    // trying to go to so we can drop them off there after they log in
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    return (
+      <div style={{ padding: 'var(--space-8)', textAlign: 'center', maxWidth: '600px', margin: '40px auto' }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
+        <h2 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, marginBottom: '8px' }}>Access Restricted</h2>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>
+          Your assigned role (<strong>{role}</strong>) does not have authorization to access this business module (HTTP 403 Forbidden).
+        </p>
+        <button
+          onClick={() => window.history.back()}
+          style={{
+            padding: '10px 20px',
+            background: 'var(--color-brand)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 'var(--radius-md)',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Go Back
+        </button>
+      </div>
+    );
   }
 
   return children;

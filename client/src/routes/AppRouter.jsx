@@ -2,15 +2,15 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 
 // Pages
 import LoginPage from '../pages/auth/LoginPage';
-import RegisterPage from '../pages/auth/RegisterPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
-import TransactionsPage from '../pages/transactions/TransactionsPage';
-import BudgetsPage from '../pages/budgets/BudgetsPage';
-import AnalyticsPage from '../pages/analytics/AnalyticsPage';
-import RecurringPage from '../pages/recurring/RecurringPage';
-import GoalsPage from '../pages/goals/GoalsPage';
-import AccountsPage from '../pages/accounts/AccountsPage';
+import InventoryPage from '../pages/inventory/InventoryPage';
+import SalesPOSPage from '../pages/sales/SalesPOSPage';
+import PurchasesPage from '../pages/purchases/PurchasesPage';
+import CustomersPage from '../pages/customers/CustomersPage';
+import FinancePage from '../pages/finance/FinancePage';
+import EmployeesPage from '../pages/employees/EmployeesPage';
 import ReportsPage from '../pages/reports/ReportsPage';
+import UsersPage from '../pages/users/UsersPage';
 
 // Layout & Guards
 import AppShell from '../components/layout/AppShell';
@@ -19,9 +19,8 @@ import ProtectedRoute from './ProtectedRoute';
 export default function AppRouter() {
   return (
     <Routes>
-      {/* Public Auth Routes */}
+      {/* Public Auth Route */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
 
       {/* Protected App Routes */}
       <Route
@@ -33,14 +32,68 @@ export default function AppRouter() {
         }
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Module 1: Dashboard */}
         <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="accounts" element={<AccountsPage />} />
-        <Route path="transactions" element={<TransactionsPage />} />
-        <Route path="recurring" element={<RecurringPage />} />
-        <Route path="goals" element={<GoalsPage />} />
-        <Route path="budgets" element={<BudgetsPage />} />
-        <Route path="analytics" element={<AnalyticsPage />} />
-        <Route path="reports" element={<ReportsPage />} />
+        
+        {/* Module 2 & 3: Product Catalog, Inventory & Movements */}
+        <Route path="inventory" element={<InventoryPage />} />
+        
+        {/* Module 5: Sales POS & Invoicing */}
+        <Route path="sales" element={<SalesPOSPage />} />
+        
+        {/* Module 4: Suppliers, Procurement & GRN */}
+        <Route
+          path="purchases"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OWNER', 'MANAGER']}>
+              <PurchasesPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Module 6: Customer CRM */}
+        <Route path="customers" element={<CustomersPage />} />
+        
+        {/* Module 7: Financial Accounting & Ledger (Strict ADMIN/OWNER) */}
+        <Route
+          path="finance"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OWNER']}>
+              <FinancePage />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Module 8: Workforce & HR (ADMIN/OWNER/MANAGER) */}
+        <Route
+          path="employees"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OWNER', 'MANAGER']}>
+              <EmployeesPage />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Module 9: Reports & Business Intelligence */}
+        <Route
+          path="reports"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OWNER', 'MANAGER']}>
+              <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* User Provisioning (ADMIN/OWNER) */}
+        <Route
+          path="users"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OWNER']}>
+              <UsersPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       {/* 404 Catch-all */}
