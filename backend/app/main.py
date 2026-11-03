@@ -1,7 +1,9 @@
+import os
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from backend.app.core.config import settings
@@ -108,3 +110,32 @@ def health():
 
 # Include all API routers
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Serve built frontend in production if client/dist exists
+_dist_candidates = [
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "client", "dist")),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "client", "dist")),
+    os.path.abspath("client/dist"),
+    os.path.abspath("dist"),
+]
+
+_dist_dir = None
+for _p in _dist_candidates:
+    if os.path.isdir(_p) and os.path.isfile(os.path.join(_p, "index.html")):
+        _dist_dir = _p
+        break
+
+if _dist_dir:
+    _assets_dir = os.path.join(_dist_dir, "assets")
+    if os.path.isdir(_assets_dir):
+        app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(request: Request, full_path: str):
+        if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("redoc") or full_path.startswith("openapi.json"):
+            return JSONResponse(status_code=404, content={"detail": "Not Found"})
+        file_path = os.path.join(_dist_dir, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(_dist_dir, "index.html"))
+

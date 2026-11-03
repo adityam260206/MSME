@@ -14,10 +14,13 @@ class Settings:
     BCRYPT_ROUNDS: int = 12
 
     # Database URL
-    DATABASE_URL: str = os.getenv(
+    _raw_db_url: str = os.getenv(
         "DATABASE_URL", 
         "sqlite:///./msme360.db"
     )
+    if _raw_db_url.startswith("postgres://"):
+        _raw_db_url = _raw_db_url.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL: str = _raw_db_url
 
     # CORS
     CORS_ORIGINS: List[str] = [
