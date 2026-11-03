@@ -32,7 +32,14 @@ async def lifespan(app: FastAPI):
         except Exception:
             pass  # For PostgreSQL or if column already exists
 
-    # 3. Seed verified official government schemes and ensure demo customer credentials
+    # 3. Automatically ensure demo database is seeded (Tenant, Roles, Users, Catalog, etc.)
+    try:
+        from backend.scripts.seed import seed_database
+        seed_database()
+    except Exception as e:
+        print(f"Startup demo seed notice: {e}")
+
+    # 4. Seed verified official government schemes and ensure demo customer credentials
     db = SessionLocal()
     try:
         scheme_eligibility_service.ensure_default_schemes_seeded(db)

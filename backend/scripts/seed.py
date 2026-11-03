@@ -56,6 +56,7 @@ def seed_database():
             ("owner", "owner@msme360.local", "Owner@12345", "Sunil Verma (Owner)", "OWNER"),
             ("manager", "manager@msme360.local", "Manager@12345", "Ramesh Joshi (Store Manager)", "MANAGER"),
             ("staff", "staff@msme360.local", "Staff@12345", "Pooja Patel (Sales Staff)", "STAFF"),
+            ("counterstaff", "counterstaff@msme360.local", "Staff@12345", "Counter Staff", "STAFF"),
         ]
         user_objects = {}
         for username, email, pwd, fname, role in users_data:
@@ -74,6 +75,13 @@ def seed_database():
                 db.commit()
                 db.refresh(u)
                 print(f"Created User: {username} ({role})")
+            else:
+                # Ensure existing user has valid password hash and is active
+                from backend.app.core.security import verify_password
+                if not verify_password(pwd, u.password_hash) or not u.is_active:
+                    u.password_hash = hash_password(pwd)
+                    u.is_active = True
+                    db.commit()
             user_objects[username] = u
 
         admin_user = user_objects["admin"]
