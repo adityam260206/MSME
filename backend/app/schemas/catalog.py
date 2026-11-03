@@ -1,18 +1,32 @@
 from typing import Optional
 from decimal import Decimal
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 class CategoryCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = None
     parent_id: Optional[str] = None
 
+    @field_validator("parent_id", mode="before")
+    @classmethod
+    def sanitize_parent(cls, v):
+        if v == "" or (isinstance(v, str) and not v.strip()):
+            return None
+        return v
+
 class CategoryUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = None
     parent_id: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator("parent_id", mode="before")
+    @classmethod
+    def sanitize_parent(cls, v):
+        if v == "" or (isinstance(v, str) and not v.strip()):
+            return None
+        return v
 
 class CategoryResponse(BaseModel):
     id: str
@@ -61,7 +75,7 @@ class ProductResponse(BaseModel):
     min_stock_level: int
     lead_time_days: int
     safety_stock: int
-    stock_status: str  # OUT_OF_STOCK, LOW_STOCK, IN_STOCK
+    stock_status: Optional[str] = "IN_STOCK"  # OUT_OF_STOCK, LOW_STOCK, IN_STOCK
     is_active: bool
     created_at: datetime
     updated_at: datetime

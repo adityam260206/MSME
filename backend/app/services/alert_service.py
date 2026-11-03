@@ -84,3 +84,28 @@ def mark_alert_read(
     res = AlertResponse.model_validate(alert)
     res.product_name = alert.product.name if alert.product else None
     return res
+
+def mark_all_alerts_read(
+    db: Session, tenant_id: str
+) -> int:
+    unread_alerts = db.query(Alert).filter(
+        Alert.tenant_id == tenant_id,
+        Alert.is_read == False
+    ).all()
+    count = len(unread_alerts)
+    for a in unread_alerts:
+        a.is_read = True
+    db.commit()
+    return count
+
+def delete_alert(
+    db: Session, tenant_id: str, alert_id: str
+) -> None:
+    alert = db.query(Alert).filter(
+        Alert.id == alert_id,
+        Alert.tenant_id == tenant_id
+    ).first()
+    if not alert:
+        raise NotFoundException("Alert not found")
+    db.delete(alert)
+    db.commit()

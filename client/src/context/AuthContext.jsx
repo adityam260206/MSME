@@ -72,7 +72,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         user,
-        role: user?.role,
+        role: user?.role ? String(user.role).toUpperCase() : null,
         token,
         tenantId,
         capabilities,

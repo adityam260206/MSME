@@ -49,3 +49,20 @@ class SaleResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class InvoiceAuditTrailItem(BaseModel):
+    id: str
+    action: str
+    actor_name: str
+    timestamp: datetime
+    details: Optional[str] = None
+
+class RecoveredInvoiceResponse(BaseModel):
+    sale: SaleResponse
+    is_recovered_document: bool = True
+    original_invoice_number: str
+    original_created_at: datetime
+    recovery_timestamp: datetime
+    recovery_notice: str
+    retrieved_by: str
+    audit_trail: List[InvoiceAuditTrailItem] = []

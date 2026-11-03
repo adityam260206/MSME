@@ -29,9 +29,10 @@ def create_category(db: Session, tenant_id: str, req: CategoryCreate) -> Categor
     if existing:
         raise AppException(400, f"Category '{req.name}' already exists", "DUPLICATE_CATEGORY")
 
-    if req.parent_id:
+    parent_id = req.parent_id if req.parent_id else None
+    if parent_id:
         parent = db.query(Category).filter(
-            Category.id == req.parent_id,
+            Category.id == parent_id,
             Category.tenant_id == tenant_id
         ).first()
         if not parent:
@@ -41,7 +42,7 @@ def create_category(db: Session, tenant_id: str, req: CategoryCreate) -> Categor
         tenant_id=tenant_id,
         name=req.name,
         description=req.description,
-        parent_id=req.parent_id,
+        parent_id=parent_id,
     )
     db.add(category)
     db.commit()
@@ -251,3 +252,13 @@ def update_product(
     res.category_name = product.category.name if product.category else None
     res.stock_status = compute_stock_status(product.stock_quantity, product.min_stock_level)
     return res
+
+def delete_product(db: Session, tenant_id: str, product_id: str) -> None:
+    product = db.query(Product).filter(
+        Product.id == product_id,
+        Product.tenant_id == tenant_id
+    ).first()
+    if not product:
+        raise NotFoundException("Product not found")
+    product.is_active = False
+    db.commit()

@@ -1,0 +1,296 @@
+/* The foot of the sidebar: what needs attention, the theme switch, and who is
+ * signed in. The panel is the one surface that floats, so it is the one that
+ * may carry a shadow. */
+
+.account-bar {
+  position: relative;
+  padding-top: 6px;
+}
+
+.foot-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.foot-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  font-size: 13px;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.foot-btn:hover,
+.foot-btn.is-open {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.count-pill {
+  margin-left: auto;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-chip);
+  background: var(--pill-negative-bg);
+  color: var(--pill-negative-ink);
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.icon-btn {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.icon-btn:hover {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.foot-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 6px;
+  border-radius: var(--radius-control);
+}
+
+.avatar {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--raised);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.who-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.who-role {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ── The alerts panel ─────────────────────────────────────────── */
+
+.alerts-panel {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  width: 344px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 60;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.panel-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.panel-tabs {
+  display: flex;
+  gap: 16px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.panel-tab {
+  padding: 9px 0;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.panel-tab.is-current {
+  color: var(--text);
+  border-bottom-color: var(--text);
+  font-weight: 500;
+}
+
+.tab-count {
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-list {
+  max-height: 296px;
+  overflow-y: auto;
+}
+
+.panel-empty {
+  margin: 0;
+  padding: 22px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.alert-row {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.alert-row:last-child {
+  border-bottom: 0;
+}
+
+.alert-glyph {
+  flex: none;
+  margin-top: 1px;
+  color: var(--warning);
+}
+
+.alert-glyph.is-critical {
+  color: var(--negative);
+}
+
+.alert-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.alert-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.alert-row.is-read .alert-title {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.alert-message {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.alert-time {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.alert-actions {
+  flex: none;
+  display: flex;
+  gap: 0;
+  align-self: flex-start;
+}
+
+.alert-actions .icon-btn {
+  width: 28px;
+  height: 28px;
+}
+
+.panel-foot {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--rule);
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--surface);
+  text-align: left;
+}
+
+.panel-foot:hover {
+  background: var(--raised);
+}
+
+@media (max-width: 900px) {
+  .alerts-panel {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-list {
+    max-height: none;
+  }
+
+  .foot-row .icon-btn,
+  .foot-btn {
+    height: 40px;
+  }
+}

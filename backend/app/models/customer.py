@@ -11,6 +11,7 @@ class Customer(Base):
     name = Column(String(255), nullable=False)
     email = Column(String(255), nullable=True)
     phone = Column(String(50), nullable=True)
+    password_hash = Column(String(255), nullable=True)
     total_spent = Column(Numeric(12, 2), nullable=False, default=0.00)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, default=utc_now)
@@ -18,6 +19,7 @@ class Customer(Base):
 
     tenant = relationship("Tenant", back_populates="customers")
     sales = relationship("Sale", back_populates="customer")
+    feedback = relationship("CustomerFeedback", back_populates="customer", cascade="all, delete-orphan")
 
     __table_args__ = (
         CheckConstraint("total_spent >= 0", name="chk_customer_total_spent_non_negative"),

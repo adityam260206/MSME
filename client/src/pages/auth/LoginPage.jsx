@@ -1,13 +1,19 @@
 import { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { LogIn, KeyRound, UserCheck, Shield } from 'lucide-react';
-import Card from '../../components/ui/Card';
+import { useNavigate, Link } from 'react-router-dom';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
+import BrandMark from '../../components/layout/BrandMark';
 import { AuthContext } from '../../context/AuthContext';
 import { ToastContext } from '../../context/ToastContext';
 import api from '../../api/client';
 import './AuthLayout.css';
+
+const DEMO_ROLES = [
+  { role: 'Administrator', username: 'admin', password: 'Admin@12345' },
+  { role: 'Owner', username: 'owner', password: 'Owner@12345' },
+  { role: 'Manager', username: 'manager', password: 'Manager@12345' },
+  { role: 'Counter staff', username: 'staff', password: 'Staff@12345' },
+];
 
 export default function LoginPage() {
   const [username, setUsername] = useState('owner');
@@ -19,14 +25,14 @@ export default function LoginPage() {
   const { showToast } = useContext(ToastContext);
   const navigate = useNavigate();
 
-  const handleDemoSelect = (u, p) => {
-    setUsername(u);
-    setPassword(p);
+  const fillDemo = (demoUsername, demoPassword) => {
+    setUsername(demoUsername);
+    setPassword(demoPassword);
     setErrorMsg('');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setIsLoading(true);
     setErrorMsg('');
 
@@ -35,11 +41,10 @@ export default function LoginPage() {
       const { user, access_token } = response.data.data;
 
       login(user, access_token);
-      showToast(`Welcome back, ${user.full_name}! (${user.role})`, 'success');
+      showToast(`Signed in as ${user.full_name}`, 'success');
       navigate('/dashboard', { replace: true });
     } catch (error) {
-      setErrorMsg(error.message || 'Invalid username or password');
-      showToast(error.message || 'Login failed', 'error');
+      setErrorMsg(error.message || 'That username and password do not match.');
     } finally {
       setIsLoading(false);
     }
@@ -47,169 +52,79 @@ export default function LoginPage() {
 
   return (
     <div className="auth-container">
-      <Card className="auth-card" padding="lg" style={{ maxWidth: '440px', width: '100%' }}>
-        <div className="auth-header" style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '56px',
-              height: '56px',
-              borderRadius: '16px',
-              background: 'linear-gradient(135deg, #4F46E5, #06B6D4)',
-              color: '#fff',
-              fontSize: '22px',
-              fontWeight: 800,
-              marginBottom: '12px',
-              boxShadow: '0 8px 16px rgba(79, 70, 229, 0.25)',
-            }}
-          >
-            360
+      <main className="auth-card">
+        <div className="auth-header">
+          <div className="auth-wordmark">
+            <BrandMark size={24} />
+            <span className="auth-name">MSME360</span>
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, margin: '0 0 4px 0' }}>
-            <span style={{ color: '#4F46E5' }}>MSME</span>
-            <span style={{ color: '#06B6D4' }}>360</span>
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>
-            Integrated Business Operations & Analytics Platform
-          </p>
+          <h1 className="auth-title">Sign in</h1>
+          <p className="auth-subtitle">Counter, stock and ledger for a small business.</p>
         </div>
 
         {errorMsg && (
-          <div
-            style={{
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid #EF4444',
-              color: '#DC2626',
-              padding: '10px 14px',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '13px',
-              marginBottom: '16px',
-            }}
-          >
+          <p className="auth-error" role="alert">
             {errorMsg}
-          </div>
+          </p>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>
-              Username
-            </label>
-            <Input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g. owner, manager, staff"
-              required
-              autoFocus
-            />
-          </div>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <Input
+            label="Username"
+            type="text"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            placeholder="owner"
+            autoComplete="username"
+            required
+            autoFocus
+          />
 
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>
-              Password
-            </label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-            />
-          </div>
+          <Input
+            label="Password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Your password"
+            autoComplete="current-password"
+            required
+          />
 
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={isLoading}
-            style={{ marginTop: '8px', padding: '12px', fontWeight: 700 }}
-          >
-            {isLoading ? 'Signing In...' : 'Sign In to MSME360'}
+          <Button type="submit" variant="primary" size="lg" fullWidth isLoading={isLoading}>
+            Sign in
           </Button>
         </form>
 
-        {/* Demo Accounts Quick-Select */}
-        <div style={{ marginTop: '28px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', textAlign: 'center', letterSpacing: '0.5px' }}>
-            Quick Demo Role Logins
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={() => handleDemoSelect('admin', 'Admin@12345')}
-              style={{
-                padding: '8px 10px',
-                borderRadius: 'var(--radius-sm)',
-                border: username === 'admin' ? '2px solid #EF4444' : '1px solid var(--border-subtle)',
-                background: 'var(--bg-surface)',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                textAlign: 'left',
-                fontSize: '12px',
-              }}
-            >
-              <div style={{ fontWeight: 700, color: '#EF4444' }}>ADMIN</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>admin / Admin@12345</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleDemoSelect('owner', 'Owner@12345')}
-              style={{
-                padding: '8px 10px',
-                borderRadius: 'var(--radius-sm)',
-                border: username === 'owner' ? '2px solid #8B5CF6' : '1px solid var(--border-subtle)',
-                background: 'var(--bg-surface)',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                textAlign: 'left',
-                fontSize: '12px',
-              }}
-            >
-              <div style={{ fontWeight: 700, color: '#8B5CF6' }}>OWNER</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>owner / Owner@12345</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleDemoSelect('manager', 'Manager@12345')}
-              style={{
-                padding: '8px 10px',
-                borderRadius: 'var(--radius-sm)',
-                border: username === 'manager' ? '2px solid #3B82F6' : '1px solid var(--border-subtle)',
-                background: 'var(--bg-surface)',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                textAlign: 'left',
-                fontSize: '12px',
-              }}
-            >
-              <div style={{ fontWeight: 700, color: '#3B82F6' }}>MANAGER</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>manager / Manager@12345</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleDemoSelect('staff', 'Staff@12345')}
-              style={{
-                padding: '8px 10px',
-                borderRadius: 'var(--radius-sm)',
-                border: username === 'staff' ? '2px solid #10B981' : '1px solid var(--border-subtle)',
-                background: 'var(--bg-surface)',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                textAlign: 'left',
-                fontSize: '12px',
-              }}
-            >
-              <div style={{ fontWeight: 700, color: '#10B981' }}>STAFF</div>
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>staff / Staff@12345</div>
-            </button>
+        <div className="demo-block">
+          <p className="demo-title">
+            This is a demo shop. <span>Choose a role to fill the form.</span>
+          </p>
+          <div className="demo-grid">
+            {DEMO_ROLES.map((demo) => {
+              const isCurrent = username === demo.username;
+              return (
+                <button
+                  key={demo.username}
+                  type="button"
+                  className={`demo-btn${isCurrent ? ' is-current' : ''}`}
+                  onClick={() => fillDemo(demo.username, demo.password)}
+                  aria-pressed={isCurrent}
+                >
+                  <strong>{demo.role}</strong>
+                  <span>{demo.username}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
-      </Card>
+      </main>
+
+      <p className="auth-footer">
+        Buying from this shop?{' '}
+        <Link to="/portal/login" className="auth-link">
+          Open the customer portal
+        </Link>
+      </p>
     </div>
   );
 }

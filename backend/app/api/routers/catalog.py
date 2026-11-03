@@ -11,7 +11,7 @@ from backend.app.schemas.catalog import (
 from backend.app.schemas.common import BaseResponse, PaginatedResponse, PaginatedMeta
 from backend.app.services.catalog_service import (
     create_category, list_categories, update_category,
-    create_product, get_product, list_products, update_product,
+    create_product, get_product, list_products, update_product, delete_product,
 )
 
 router = APIRouter(prefix="/inventory", tags=["Catalog & Categories"])
@@ -125,4 +125,17 @@ def edit_product(
         success=True,
         message="Product updated successfully",
         data=prod,
+    )
+
+@router.delete("/products/{product_id}", response_model=BaseResponse[dict])
+def archive_product(
+    product_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles("ADMIN", "OWNER")),
+):
+    delete_product(db, current_user.tenant_id, product_id)
+    return BaseResponse(
+        success=True,
+        message="Product archived successfully",
+        data={"id": product_id},
     )

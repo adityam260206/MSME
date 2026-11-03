@@ -25,8 +25,11 @@ input, button, textarea, select {
   background: none;
 }
 
+/* A native button keeps the user agent's own text colour, which skips the
+ * theme and can land on a light grey that fails contrast on white. */
 button {
   cursor: pointer;
+  color: inherit;
 }
 
 a {

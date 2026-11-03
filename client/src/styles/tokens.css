@@ -1,86 +1,178 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* MSME360 design tokens — Achromatic ledger (tasteskill v2, seed 471196937)
+ *
+ * The chrome holds no colour. Money and counts are set in ink, the one chart
+ * hue marks the day's main data element, and the only other hue is a small
+ * signal where a figure changed.
+ *
+ * The names below are the sheet's roles. The legacy aliases further down map
+ * the previous system (--bg-root, --color-brand, --text-primary…) onto the same
+ * values, so every existing screen follows without being rewritten.
+ *
+ * Canvas arithmetic, 1440px window:
+ *   sidebar 248 + hairline 1 + canvas 1191, canvas gutter 40 each side
+ *   content 1111 = 6 columns of 168 with 5 gaps of 17.4 → 3 cards of 168*2+17 = 353
+ *   Cards in a row land on both canvas edges because the row is a grid, not
+ *   fixed widths: repeat(3, minmax(0, 1fr)) with a single 12px gap.
+ */
 
 :root {
-  /* Typography */
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  
-  /* Font Sizes */
-  --text-xs: 0.75rem;     /* 12px */
-  --text-sm: 0.875rem;    /* 14px */
-  --text-base: 1rem;      /* 16px */
-  --text-lg: 1.125rem;    /* 18px */
-  --text-xl: 1.25rem;     /* 20px */
-  --text-2xl: 1.5rem;     /* 24px */
-  --text-3xl: 1.875rem;   /* 30px */
-  
-  /* Font Weights */
+  color-scheme: light;
+
+  /* ── Sheet roles ─────────────────────────────────────────── */
+  --ground: #f2f4f7;      /* ledger paper, a blue-grey one level off white */
+  --surface: #ffffff;
+  --raised: #f6f7f9;      /* a tone step inside a white panel */
+  --active: #e4e7ec;      /* the neutral grey pill of the active nav row */
+  --border: #e1e5ea;      /* panel edges, 1.2:1 on white */
+  --rule: #eef0f3;        /* row rules, one step lighter */
+  --control: #cfd4db;     /* control borders, one step stronger */
+  --text: #101317;
+  --muted: #565d6a;       /* secondary text, 6.9:1 on --ground */
+  --faint: #6b7280;       /* placeholders and meta, 4.6:1 on white */
+  --primary: #1b1e23;     /* the one filled action, near-black */
+  --primary-hover: #2b3037;
+  --accent: #1d5fbf;      /* ledger ink: the main data element only */
+  --accent-ink: #174a96;
+  --accent-wash: #e8eff9;
+
+  --positive: #247b50;
+  --negative: #c4242a;
+  --warning: #92400e;
+  --pill-positive-bg: #dcfae5;  --pill-positive-ink: #04250e;
+  --pill-negative-bg: #ffedea;  --pill-negative-ink: #831c1e;
+  --pill-warning-bg: #fffbeb;   --pill-warning-ink: #92400e;
+  --pill-neutral-bg: #eef0f3;   --pill-neutral-ink: #3a4048;
+
+  --grid: #e5e7eb;
+  --chart-span: 0.06;
+
+  /* ── Shape ───────────────────────────────────────────────── */
+  --radius-card: 8px;
+  --radius-control: 6px;
+  --radius-chip: 4px;
+
+  /* ── Space ───────────────────────────────────────────────── */
+  --gap: 12px;
+  --pad: 40px;
+  --card-pad: 20px;
+  --nav-row: 34px;
+  --control-height: 36px;
+  --row-height: 44px;
+  --sidebar-width: 248px;
+
+  /* ── Type ────────────────────────────────────────────────── */
+  --font: 'Geist', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  --fs-title: 24px;
+  --fs-section: 16px;
+  --fs-kpi: 30px;
+  --fs-body: 14px;
+  --fs-small: 12px;
+
+  /* ── Legacy aliases: the previous system's names ─────────── */
+  --font-sans: var(--font);
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
 
-  /* Spacing */
-  --space-1: 0.25rem;     /* 4px */
-  --space-2: 0.5rem;      /* 8px */
-  --space-3: 0.75rem;     /* 12px */
-  --space-4: 1rem;        /* 16px */
-  --space-5: 1.25rem;     /* 20px */
-  --space-6: 1.5rem;      /* 24px */
-  --space-8: 2rem;        /* 32px */
-  --space-10: 2.5rem;     /* 40px */
-  --space-12: 3rem;       /* 48px */
-  --space-16: 4rem;       /* 64px */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
 
-  /* Border Radii (Apple-inspired rounded corners) */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
   --radius-full: 9999px;
 
-  /* Universal Brand Colors */
-  --color-brand: #6C5CE7;
-  --color-brand-hover: #5A4BCC;
-  --color-success: #00C896;
-  --color-warning: #FFB800;
-  --color-danger: #FF5A5F;
-  --color-danger-hover: #E04D52;
+  --color-brand: var(--accent);
+  --color-brand-hover: var(--accent-ink);
+  --color-success: var(--positive);
+  --color-warning: var(--warning);
+  --color-danger: var(--negative);
+  --color-danger-hover: #a81d22;
 
-  /* Light Theme (Default) */
-  --bg-root: #F2F2F7;         /* iOS grouped background */
-  --bg-surface: #FFFFFF;
-  --bg-surface-hover: #F9F9FB;
-  --bg-surface-active: #F0F0F5;
-  
-  --text-primary: #1C1C1E;
-  --text-secondary: #8E8E93;
-  --text-tertiary: #C7C7CC;
-  
-  --border-subtle: #E5E5EA;
-  --border-strong: #D1D1D6;
+  --bg-root: var(--ground);
+  --bg-surface: var(--surface);
+  --bg-surface-hover: var(--raised);
+  --bg-surface-active: var(--active);
 
-  /* Shadows - Light */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
+  --text-primary: var(--text);
+  --text-secondary: var(--muted);
+  --text-tertiary: var(--faint);
+
+  --border-subtle: var(--border);
+  --border-strong: var(--control);
+
+  /* Nothing at rest casts a shadow. These exist for what floats. */
+  --shadow-sm: none;
+  --shadow-md: 0 2px 8px rgba(16, 19, 23, 0.06);
+  --shadow-lg: 0 12px 28px rgba(16, 19, 23, 0.12);
 }
 
-/* Dark Theme */
-html[data-theme="dark"] {
-  --bg-root: #000000;         /* True black for OLED / iOS dark mode feel */
-  --bg-surface: #1C1C1E;      /* Elevated surface */
-  --bg-surface-hover: #2C2C2E;
-  --bg-surface-active: #3A3A3C;
-  
-  --text-primary: #FFFFFF;
-  --text-secondary: #EBEBF599; /* 60% opacity white */
-  --text-tertiary: #EBEBF54D;  /* 30% opacity white */
-  
-  --border-subtle: #38383A;
-  --border-strong: #48484A;
+/* One gutter, narrowed twice: the tablet band, then the phone. */
+@media (max-width: 1100px) {
+  :root {
+    --pad: 28px;
+  }
+}
 
-  /* Shadows - Dark (Subtler on dark backgrounds) */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 8px 16px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 16px 32px rgba(0, 0, 0, 0.5);
+@media (max-width: 900px) {
+  :root {
+    --pad: 16px;
+    --card-pad: 16px;
+  }
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  --ground: #0e0f11;
+  --surface: #16181b;
+  --raised: #1d2024;
+  --active: #282c31;
+  --border: #26292e;
+  --rule: #1e2126;
+  --control: #3c4149;
+  --text: #f4f5f7;
+  --muted: #b0b5bd;       /* 8.1:1 on --ground */
+  --faint: #949aa3;       /* 5.9:1 on --surface */
+  --primary: #f4f5f7;     /* inverted: light fill, dark label */
+  --primary-hover: #ffffff;
+  --accent: #6ba3f2;      /* the same ink, lifted for a dark ground */
+  --accent-ink: #8bbcff;
+  --accent-wash: #172436;
+
+  --positive: #3fc07a;
+  --negative: #e5566f;
+  --warning: #e0a33c;
+  --pill-positive-bg: #172a1d;  --pill-positive-ink: #3fc07a;
+  --pill-negative-bg: #2c1a20;  --pill-negative-ink: #e5566f;
+  --pill-warning-bg: #2a2113;   --pill-warning-ink: #e0a33c;
+  --pill-neutral-bg: #24272c;   --pill-neutral-ink: #c9ced6;
+
+  --grid: #2b2f34;
+  --chart-span: 0.12;
+
+  --color-danger-hover: #f06d82;
+
+  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.55);
 }

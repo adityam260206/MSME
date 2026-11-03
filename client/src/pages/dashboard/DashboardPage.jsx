@@ -1,768 +1,683 @@
-import React, { useState, useEffect, useContext } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  TrendingUp,
-  Package,
-  AlertTriangle,
-  ShoppingCart,
-  DollarSign,
-  ArrowUpRight,
-  PlusCircle,
-  Truck,
-  RotateCcw,
-  Target,
-  Sparkles,
-  Layers,
-  Calendar,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  ArrowRight
-} from 'lucide-react';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from 'recharts';
+import { ArrowRight, RefreshCw } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
-import Skeleton from '../../components/feedback/Skeleton';
 import api from '../../api/client';
+import Modal from '../../components/ui/Modal';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
 import './DashboardPage.css';
 
+/* ── Formatting ─────────────────────────────────────────────────
+ * Money two decimals with Indian grouping; compact figures on an axis;
+ * dates as "21 Oct" beside a row and "Saturday 31 October" in a title. */
+
+const money = (value) =>
+  '₹' + Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const compact = (value) => {
+  const n = Number(value || 0);
+  const trim = (s) => s.replace(/\.0$/, '');
+  if (n >= 10000000) return `₹${trim((n / 10000000).toFixed(1))}Cr`;
+  if (n >= 100000) return `₹${trim((n / 100000).toFixed(1))}L`;
+  if (n >= 1000) return `₹${Math.round(n / 1000)}k`;
+  return `₹${Math.round(n)}`;
+};
+
+const plainMoney = (value) => '₹' + Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+const dayLabel = (iso) => {
+  const date = new Date(`${iso}T00:00:00`);
+  return `${date.getDate()} ${date.toLocaleString('en-GB', { month: 'short' })}`;
+};
+
+const longDate = (iso) => {
+  const date = new Date(`${iso}T00:00:00`);
+  return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+};
+
+const clock = (date) =>
+  date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+/** Round the tick step so the axis reads 0 / 10k / 20k / 30k, never 0 / 13k / 25k. */
+function niceStep(max, count = 4) {
+  const raw = max / count;
+  const magnitude = 10 ** Math.floor(Math.log10(raw || 1));
+  const scaled = raw / magnitude;
+  const step = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 2.5 ? 2.5 : scaled <= 5 ? 5 : 10;
+  return step * magnitude;
+}
+
+/**
+ * Daily takings as one line. One series, four gridlines, no y-axis line, no
+ * fill, no markers — except today, which takes the one chart hue, and the
+ * biggest day, which is labelled with its cause and amount.
+ */
+function TakingsChart({ points, height = 175 }) {
+  const wrapRef = useRef(null);
+  const [width, setWidth] = useState(720);
+
+  useEffect(() => {
+    const element = wrapRef.current;
+    if (!element || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver((entries) => {
+      const next = Math.round(entries[0].contentRect.width);
+      if (next > 120) setWidth(next);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const W = width;
+  const H = height;
+  const pad = { top: 26, right: 14, bottom: 24, left: 52 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+
+  const values = points.map((point) => Number(point.revenue || 0));
+  const step = niceStep(Math.max(...values, 0));
+  const ceiling = step * 4;
+  const x = (index) => pad.left + (points.length <= 1 ? plotW / 2 : (index / (points.length - 1)) * plotW);
+  const y = (value) => pad.top + plotH - (value / ceiling) * plotH;
+
+  const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${x(index).toFixed(1)},${y(values[index]).toFixed(1)}`).join(' ');
+
+  const peakIndex = values.reduce((best, value, index) => (value > values[best] ? index : best), 0);
+  const peakValue = values[peakIndex] || 0;
+  const lastIndex = points.length - 1;
+
+  const ticks = [0, 1, 2, 3, 4].map((n) => n * step);
+  const xLabelCount = W < 430 ? 2 : 3;
+  const labelEvery = Math.max(1, Math.floor(points.length / xLabelCount));
+  const xLabelIndexes = points
+    .map((_, index) => index)
+    .filter((index) => index % labelEvery === 0 || index === lastIndex);
+
+  const summary =
+    peakValue > 0
+      ? `Daily takings, last ${points.length} days. Highest ${money(peakValue)} on ${dayLabel(points[peakIndex].date)}; today ${money(values[lastIndex])}.`
+      : `Daily takings, last ${points.length} days. No bills taken in this period.`;
+
+  return (
+    <div className="chart-wrap" ref={wrapRef}>
+      <svg
+        className="takings-chart"
+        viewBox={`0 0 ${W} ${H}`}
+        width={W}
+        height={H}
+        role="img"
+        aria-label={summary}
+      >
+      {ticks.map((tick) => (
+        <line
+          key={tick}
+          x1={pad.left}
+          x2={W - pad.right}
+          y1={y(tick)}
+          y2={y(tick)}
+          stroke="var(--grid)"
+          strokeWidth="1"
+        />
+      ))}
+
+      <line
+        x1={pad.left}
+        x2={W - pad.right}
+        y1={y(0)}
+        y2={y(0)}
+        stroke="var(--border)"
+        strokeWidth="1"
+      />
+
+      {ticks.map((tick) => (
+        <text key={`label-${tick}`} x={pad.left - 8} y={y(tick) + 3.5} textAnchor="end" className="chart-tick">
+          {compact(tick)}
+        </text>
+      ))}
+
+      <path d={path} fill="none" stroke="var(--text)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+
+      {peakValue > 0 && peakIndex !== lastIndex && (
+        <g>
+          <line
+            x1={x(peakIndex)}
+            x2={x(peakIndex)}
+            y1={y(peakValue) - 6}
+            y2={pad.top + 10}
+            stroke="var(--control)"
+            strokeWidth="1"
+          />
+          <text x={x(peakIndex)} y={pad.top - 2} textAnchor="middle" className="chart-note">
+            {dayLabel(points[peakIndex].date)} · {plainMoney(peakValue)}
+          </text>
+        </g>
+      )}
+
+      {/* Today: the one hue on the screen's main data element. */}
+      <circle cx={x(lastIndex)} cy={y(values[lastIndex])} r="3.5" fill="var(--accent)" />
+
+      {xLabelIndexes.map((index) => (
+        <text
+          key={`x-${index}`}
+          x={Math.min(Math.max(x(index), pad.left + 10), W - pad.right - 10)}
+          y={H - 6}
+          textAnchor={index === 0 ? 'start' : index === lastIndex ? 'end' : 'middle'}
+          className="chart-tick"
+        >
+          {dayLabel(points[index].date)}
+        </text>
+      ))}
+      </svg>
+    </div>
+  );
+}
+
+function PlanRow({ label, actual, target, unit = 'money', percent, footnote }) {
+  const ratio = Number(target) > 0 ? Math.min(1, Number(actual) / Number(target)) : 0;
+  const met = Number(actual) >= Number(target) && Number(target) > 0;
+
+  return (
+    <div className="plan-row">
+      <div className="plan-row-head">
+        <span className="plan-row-label">{label}</span>
+        <span className="plan-row-figures">
+          <span className="plan-actual">
+            {unit === 'money' ? money(actual) : `${actual} bills`}
+          </span>
+          <span className="plan-target">
+            {' '}of {unit === 'money' ? money(target) : `${target} bills`}
+          </span>
+        </span>
+      </div>
+      <div className="plan-track" aria-hidden="true">
+        <span className={`plan-fill${met ? ' is-met' : ''}`} style={{ width: `${Math.max(ratio * 100, Number(actual) > 0 ? 2 : 0)}%` }} />
+      </div>
+      <div className="plan-row-foot">
+        <span className="meta">{percent}% of the month's plan</span>
+        <span className={met ? 'plan-over' : 'meta'}>{footnote}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
-  const { role, user } = useContext(AuthContext);
+  const { role } = useContext(AuthContext);
+  const userRole = role ? String(role).toUpperCase() : 'STAFF';
+  const canSeeMoney = userRole !== 'STAFF';
+  const canManagePlan = ['ADMIN', 'OWNER'].includes(userRole);
   const navigate = useNavigate();
 
   const [summary, setSummary] = useState(null);
   const [trends, setTrends] = useState([]);
-  const [selectedRange, setSelectedRange] = useState('30d'); // 7d, 30d, 90d
-  const [goalsProgress, setGoalsProgress] = useState(null);
-  const [actionItems, setActionItems] = useState([]);
-  const [anomalies, setAnomalies] = useState([]);
+  const [range, setRange] = useState(30);
+  const [goals, setGoals] = useState(null);
+  const [needs, setNeeds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [updatedAt, setUpdatedAt] = useState(null);
 
-  // Goal config modal state
-  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
-  const [goalRevenueInput, setGoalRevenueInput] = useState('');
-  const [goalVolumeInput, setGoalVolumeInput] = useState('');
-  const [isSavingGoal, setIsSavingGoal] = useState(false);
+  const [isPlanOpen, setIsPlanOpen] = useState(false);
+  const [planRevenue, setPlanRevenue] = useState('');
+  const [planBills, setPlanBills] = useState('');
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
 
-  const loadData = async () => {
+  const load = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      // 1. Dashboard summary
       const summaryRes = await api.get('/dashboard/summary');
-      if (summaryRes.data.success) {
-        setSummary(summaryRes.data.data);
-      }
+      if (summaryRes.data.success) setSummary(summaryRes.data.data);
 
-      // 2. Trends if authorized
-      if (role !== 'STAFF') {
+      if (canSeeMoney) {
         const trendsRes = await api.get('/analytics/sales');
-        if (trendsRes.data.success) {
-          setTrends(trendsRes.data.data.trends || []);
-        }
+        if (trendsRes.data.success) setTrends(trendsRes.data.data.trends || []);
       }
 
-      // 3. Business Goals
       try {
         const goalsRes = await api.get('/dashboard/goals');
         if (goalsRes.data.success) {
-          setGoalsProgress(goalsRes.data.data);
-          setGoalRevenueInput(String(goalsRes.data.data.target_revenue || '50000'));
-          setGoalVolumeInput(String(goalsRes.data.data.target_sales_volume || '25'));
+          setGoals(goalsRes.data.data);
+          setPlanRevenue(String(Math.round(Number(goalsRes.data.data.target_revenue || 0))));
+          setPlanBills(String(goalsRes.data.data.target_sales_volume || 0));
         }
-      } catch (e) {
-        // Fallback if goals table empty
+      } catch {
+        // No plan set for this month yet.
       }
 
-      // 4. Action Center
-      if (role !== 'STAFF') {
+      {
+        const tasks = [];
+        const alerts = [];
+
         try {
           const actionRes = await api.get('/analytics/action-center');
           if (actionRes.data.success) {
-            setActionItems(actionRes.data.data.actions || []);
+            (actionRes.data.data.actions || []).forEach((action) => {
+              tasks.push({
+                id: action.id,
+                title: action.title,
+                body: action.description,
+                cta: action.action_label,
+                to: action.navigation_path,
+                severity: action.severity,
+              });
+            });
           }
-        } catch (e) {}
-      }
+        } catch {
+          // Action centre is optional for this screen.
+        }
 
-      // 5. Anomalies
-      if (role !== 'STAFF') {
         try {
           const anomalyRes = await api.get('/analytics/anomalies');
           if (anomalyRes.data.success) {
-            setAnomalies(anomalyRes.data.data.anomalies || []);
-          }
-        } catch (e) {}
-      }
+            (anomalyRes.data.data.anomalies || []).forEach((anomaly) => {
+              // An anomaly about an item an action already covers would say the
+              // same thing twice. The action carries the way out, so it stays.
+              const entity = String(anomaly.affected_entity || '').split(' (')[0];
+              const alreadyCovered = tasks.some(
+                (task) => entity && (task.title.includes(entity) || task.body.includes(entity)),
+              );
+              if (alreadyCovered) return;
 
+              alerts.push({
+                id: anomaly.id,
+                title: anomaly.category === 'SALES' ? 'No bills this week' : anomaly.condition,
+                body:
+                  anomaly.category === 'SALES'
+                    ? `${anomaly.observed_value}. The week before: ${anomaly.baseline_value}.`
+                    : `${anomaly.affected_entity}: ${anomaly.observed_value}`,
+                cta: anomaly.navigation_path === '/sales' ? 'Open the counter' : 'Look at it',
+                to: anomaly.navigation_path || '/dashboard',
+                severity: anomaly.severity,
+              });
+            });
+          }
+        } catch {
+          // Analytics is optional for this screen.
+        }
+
+        setNeeds([...alerts, ...tasks]);
+      }
     } catch (err) {
-      console.error('Failed to load dashboard data:', err);
-      setError(err.message || 'Error loading dashboard metrics');
+      setError(err?.response?.data?.message || err.message || 'The screen could not reach the server.');
     } finally {
       setIsLoading(false);
+      setUpdatedAt(new Date());
     }
   };
 
   useEffect(() => {
-    loadData();
+    load();
   }, [role]);
 
-  const handleSaveGoal = async (e) => {
-    e.preventDefault();
-    setIsSavingGoal(true);
+  const shownTrends = useMemo(() => {
+    if (!trends.length) return [];
+    return range === 7 ? trends.slice(-7) : trends.slice(-30);
+  }, [trends, range]);
+
+  const savePlan = async (event) => {
+    event.preventDefault();
+    setIsSavingPlan(true);
     try {
-      const nowMonth = new Date().toISOString().slice(0, 7);
+      const month = new Date().toISOString().slice(0, 7);
       await api.post('/dashboard/goals', {
-        target_month: nowMonth,
-        target_revenue: Number(goalRevenueInput),
-        target_sales_volume: Number(goalVolumeInput),
-        notes: "Configured via Dashboard"
+        target_month: month,
+        target_revenue: Number(planRevenue),
+        target_sales_volume: Number(planBills),
+        notes: 'Set from Today',
       });
-      setIsGoalModalOpen(false);
-      // Reload goals
       const goalsRes = await api.get('/dashboard/goals');
-      if (goalsRes.data.success) {
-        setGoalsProgress(goalsRes.data.data);
-      }
+      if (goalsRes.data.success) setGoals(goalsRes.data.data);
+      setIsPlanOpen(false);
     } catch (err) {
-      alert("Failed to save goal: " + (err.response?.data?.message || err.message));
+      setError(err?.response?.data?.message || 'The plan could not be saved.');
     } finally {
-      setIsSavingGoal(false);
+      setIsSavingPlan(false);
     }
   };
 
-  // Filter trends based on selected range
-  const filteredTrends = React.useMemo(() => {
-    if (!trends || trends.length === 0) return [];
-    if (selectedRange === '7d') return trends.slice(-7);
-    if (selectedRange === '90d') return trends;
-    return trends.slice(-30);
-  }, [trends, selectedRange]);
+  const today = summary?.today_revenue ?? 0;
+  const todayCount = shownTrends.length ? Number(shownTrends[shownTrends.length - 1].sales_count || 0) : 0;
 
-  if (isLoading) {
+  if (isLoading && !summary) {
     return (
-      <div className="dashboard-page" style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
-          <Skeleton variant="rectangular" height="120px" />
-          <Skeleton variant="rectangular" height="120px" />
-          <Skeleton variant="rectangular" height="120px" />
-          <Skeleton variant="rectangular" height="120px" />
+      <div className="today">
+        <div className="title-row">
+          <div className="skeleton-bar" style={{ width: 120, height: 26 }} />
         </div>
-        <Skeleton variant="rectangular" height="320px" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: 'var(--space-8)', textAlign: 'center' }}>
-        <p style={{ color: 'var(--color-danger)', marginBottom: '16px' }}>{error}</p>
-        <Button onClick={loadData}>Retry</Button>
+        <div className="band band-lead">
+          <div className="panel skeleton-panel" style={{ height: 320 }} />
+          <div className="panel skeleton-panel" style={{ height: 320 }} />
+        </div>
+        <div className="band band-three">
+          <div className="panel skeleton-panel" style={{ height: 220 }} />
+          <div className="panel skeleton-panel" style={{ height: 220 }} />
+          <div className="panel skeleton-panel" style={{ height: 220 }} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-page" style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-      {/* Top Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>
-              Welcome back, {user?.full_name || user?.username}!
-            </h1>
-            <span
-              style={{
-                fontSize: '11px',
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'rgba(108, 92, 231, 0.1)',
-                color: 'var(--color-brand)',
-                fontWeight: 700,
-              }}
-            >
-              {role} ACCESS
-            </span>
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '4px 0 0 0' }}>
-            Operations Command Center & Real-time Telemetry
+    <div className="today">
+      <header className="title-row">
+        <div className="title-main">
+          <h1 className="page-title">Today</h1>
+          <p className="page-sub">
+            {longDate(new Date().toISOString().slice(0, 10))}
+            {canSeeMoney && todayCount > 0
+              ? ` — ${todayCount} ${todayCount === 1 ? 'bill' : 'bills'} rung up so far.`
+              : canSeeMoney
+                ? ' — nothing billed yet today.'
+                : ' — the counter is ready for the first bill.'}
           </p>
         </div>
-
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <Button variant="primary" onClick={() => navigate('/sales')}>
-            <ShoppingCart size={16} style={{ marginRight: '6px' }} />
-            POS Terminal
+        <div className="title-actions">
+          {updatedAt && (
+            <span className="freshness">
+              Updated {clock(updatedAt)}
+              <button className="icon-quiet" onClick={load} aria-label="Refresh today's figures" title="Refresh">
+                <RefreshCw size={14} aria-hidden="true" />
+              </button>
+            </span>
+          )}
+          <Button
+            variant="secondary"
+            onClick={() => window.dispatchEvent(new Event('msme360:copilot'))}
+          >
+            Ask the copilot
           </Button>
-
-          {role !== 'STAFF' && (
-            <Button variant="secondary" onClick={() => navigate('/purchases')}>
-              <Truck size={16} style={{ marginRight: '6px' }} />
-              Procurement (PO)
-            </Button>
-          )}
-
-          {['ADMIN', 'OWNER'].includes(role) && (
-            <Button variant="secondary" onClick={() => navigate('/finance')}>
-              <DollarSign size={16} style={{ marginRight: '6px' }} />
-              Cash Flow & Ledger
-            </Button>
-          )}
+          <Button variant="primary" onClick={() => navigate('/sales')}>
+            Open the counter
+          </Button>
         </div>
-      </div>
+      </header>
 
-      {/* 4 Primary KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
-        {/* Card 1: Today's Revenue */}
-        {role !== 'STAFF' ? (
-          <Card padding="md">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                  Today's Realized Sales
-                </span>
-                <div style={{ fontSize: '24px', fontWeight: 800, color: '#10B981', marginTop: '6px' }}>
-                  ₹{Number(summary?.today_revenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </div>
-              </div>
-              <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }}>
-                <TrendingUp size={20} />
-              </div>
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-              From completed customer sales
-            </div>
-          </Card>
-        ) : (
-          <Card padding="md">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                  Active POS Counter
-                </span>
-                <div style={{ fontSize: '22px', fontWeight: 800, color: '#3B82F6', marginTop: '6px' }}>
-                  Ready to Bill
-                </div>
-              </div>
-              <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' }}>
-                <ShoppingCart size={20} />
-              </div>
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-              Staff counter ready for checkout
-            </div>
-          </Card>
-        )}
+      {error && (
+        <div className="notice" role="status">
+          <span>{error}</span>
+          <button className="link-action" onClick={load}>Try again</button>
+        </div>
+      )}
 
-        {/* Card 2: Monthly Sales Volume */}
-        <Card padding="md">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                Monthly Order Volume
-              </span>
-              <div style={{ fontSize: '24px', fontWeight: 800, marginTop: '6px' }}>
-                {summary?.monthly_sales_volume || 0} <span style={{ fontSize: '14px', fontWeight: 500 }}>orders</span>
-              </div>
-            </div>
-            <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(79, 70, 229, 0.1)', color: '#4F46E5' }}>
-              <ShoppingCart size={20} />
-            </div>
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-            Realized this calendar month
-          </div>
-        </Card>
-
-        {/* Card 3: Stock Threshold Alerts */}
-        <Card padding="md" onClick={() => navigate('/inventory')} style={{ cursor: 'pointer' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                Stock Threshold Alerts
-              </span>
-              <div style={{ fontSize: '24px', fontWeight: 800, color: (summary?.low_stock_count || 0) + (summary?.out_of_stock_count || 0) > 0 ? '#EF4444' : '#10B981', marginTop: '6px' }}>
-                {(summary?.low_stock_count || 0) + (summary?.out_of_stock_count || 0)}
-              </div>
-            </div>
-            <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444' }}>
-              <AlertTriangle size={20} />
-            </div>
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-            {summary?.out_of_stock_count || 0} stockout, {summary?.low_stock_count || 0} low stock
-          </div>
-        </Card>
-
-        {/* Card 4: Role-Based Card (Gross Profit or Inventory Total) */}
-        {['ADMIN', 'OWNER'].includes(role) ? (
-          <Card padding="md">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                  Month Gross Margin
-                </span>
-                <div style={{ fontSize: '24px', fontWeight: 800, color: Number(summary?.gross_profit || 0) >= 0 ? '#10B981' : '#EF4444', marginTop: '6px' }}>
-                  {summary?.gross_profit_margin || '0.00'}%
-                </div>
-              </div>
-              <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }}>
-                <DollarSign size={20} />
-              </div>
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-              Profit: ₹{Number(summary?.gross_profit || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-            </div>
-          </Card>
-        ) : (
-          <Card padding="md">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                  Active Catalog SKUs
-                </span>
-                <div style={{ fontSize: '24px', fontWeight: 800, marginTop: '6px' }}>
-                  {summary?.total_products || 0}
-                </div>
-              </div>
-              <div style={{ padding: '8px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6' }}>
-                <Package size={20} />
-              </div>
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-              Available in catalog system
-            </div>
-          </Card>
-        )}
-      </div>
-
-      {/* Business Goals & Action Center Row */}
-      {role !== 'STAFF' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 'var(--space-6)' }}>
-          {/* Business Goals Progress Card */}
-          <Card padding="lg">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Target size={18} style={{ color: 'var(--color-brand)' }} />
-                <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, margin: 0 }}>
-                  Monthly Business Performance Target
-                </h3>
-              </div>
-              {['ADMIN', 'OWNER'].includes(role) && (
+      <section className="band band-lead">
+        <article className="panel day-panel">
+          <div className="panel-head">
+            <h2 className="section-title">The day</h2>
+            {canSeeMoney && (
+              <div className="range-switch" role="group" aria-label="Period">
                 <button
-                  onClick={() => setIsGoalModalOpen(true)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--color-brand)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+                  className={`range-btn${range === 7 ? ' is-current' : ''}`}
+                  onClick={() => setRange(7)}
+                  aria-pressed={range === 7}
                 >
-                  Configure Target
+                  7 days
+                </button>
+                <button
+                  className={`range-btn${range === 30 ? ' is-current' : ''}`}
+                  onClick={() => setRange(30)}
+                  aria-pressed={range === 30}
+                >
+                  30 days
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="day-figure">
+            {canSeeMoney ? (
+              <>
+                <span className="day-value num">{money(today)}</span>
+                <span className="day-caption">
+                  {todayCount > 0
+                    ? `${todayCount} ${todayCount === 1 ? 'bill' : 'bills'} at the counter today`
+                    : 'Nothing billed yet today'}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="day-value day-value-text">Ready to bill</span>
+                <span className="day-caption">The counter is open for the first bill of the day</span>
+              </>
+            )}
+          </div>
+
+          {canSeeMoney && shownTrends.length > 0 ? (
+            <TakingsChart points={shownTrends} />
+          ) : (
+            <p className="panel-note">
+              {canSeeMoney
+                ? 'No takings recorded in this period.'
+                : 'Sales figures are not part of your role. The counter is ready when you are.'}
+            </p>
+          )}
+
+          {canSeeMoney && (
+            <dl className="day-strip">
+              <div className="day-cell">
+                <dt>Bills today</dt>
+                <dd className="num">{todayCount}</dd>
+              </div>
+              <div className="day-cell">
+                <dt>Average bill</dt>
+                <dd className="num">{todayCount > 0 ? money(Number(today) / todayCount) : '—'}</dd>
+              </div>
+            </dl>
+          )}
+        </article>
+
+        <article className="panel needs-panel">
+          <div className="panel-head">
+            <h2 className="section-title">Needs you</h2>
+            <span className="count-tag">{needs.length}</span>
+          </div>
+
+          {needs.length === 0 ? (
+            <p className="panel-note">
+              Nothing needs a decision right now. Stock, bills and the week's takings are on their usual line.
+            </p>
+          ) : (
+            <ul className="needs-list">
+              {needs.slice(0, 4).map((item) => (
+                <li className="need-row" key={item.id}>
+                  <div className="need-body">
+                    <p className="need-title">{item.title}</p>
+                    <p className="need-text">{item.body}</p>
+                    <button className="link-action need-cta" onClick={() => navigate(item.to)}>
+                      {item.cta}
+                      <ArrowRight size={13} aria-hidden="true" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <button className="panel-link" onClick={() => navigate('/inventory')}>
+            <span>
+              {summary?.total_products || 0} items in stock · {summary?.out_of_stock_count || 0} out of stock ·{' '}
+              {summary?.low_stock_count || 0} at the reorder point
+            </span>
+            <ArrowRight size={14} aria-hidden="true" />
+          </button>
+        </article>
+      </section>
+
+      <section className={`band ${canSeeMoney ? 'band-month' : 'band-two'}`}>
+        {canSeeMoney && (
+          <article className="panel">
+            <div className="panel-head">
+              <h2 className="section-title">October</h2>
+              {canManagePlan && (
+                <button className="link-action" onClick={() => setIsPlanOpen(true)}>
+                  {goals ? 'Change the plan' : 'Set a plan'}
                 </button>
               )}
             </div>
 
-            {goalsProgress ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {/* Revenue Target Bar */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Revenue Target ({goalsProgress.target_month})</span>
-                    <span style={{ fontWeight: 600 }}>
-                      ₹{Number(goalsProgress.actual_revenue || 0).toLocaleString('en-IN')} / ₹{Number(goalsProgress.target_revenue || 0).toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-root)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div
-                      style={{
-                        width: `${Math.min(100, Number(goalsProgress.revenue_achievement_rate || 0))}%`,
-                        height: '100%',
-                        backgroundColor: Number(goalsProgress.revenue_achievement_rate || 0) >= 100 ? '#10B981' : 'var(--color-brand)',
-                        borderRadius: '4px',
-                        transition: 'width 0.5s ease',
-                      }}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    <span>{goalsProgress.revenue_achievement_rate}% Achieved</span>
-                    {Number(goalsProgress.remaining_revenue_deficit) > 0 ? (
-                      <span style={{ color: '#EF4444' }}>Deficit: ₹{Number(goalsProgress.remaining_revenue_deficit).toLocaleString('en-IN')}</span>
-                    ) : (
-                      <span style={{ color: '#10B981' }}>Target Met!</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Sales Volume Bar */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Sales Volume Target</span>
-                    <span style={{ fontWeight: 600 }}>
-                      {goalsProgress.actual_sales_volume} / {goalsProgress.target_sales_volume} orders
-                    </span>
-                  </div>
-                  <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-root)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div
-                      style={{
-                        width: `${Math.min(100, Number(goalsProgress.volume_achievement_rate || 0))}%`,
-                        height: '100%',
-                        backgroundColor: '#3B82F6',
-                        borderRadius: '4px',
-                        transition: 'width 0.5s ease',
-                      }}
-                    />
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    {goalsProgress.volume_achievement_rate}% Achieved
-                  </div>
-                </div>
+            <dl className="money-grid">
+              <div className="money-cell">
+                <dt>Revenue</dt>
+                <dd className="num">{money(summary?.monthly_revenue)}</dd>
               </div>
-            ) : (
-              <div style={{ fontSize: '13px', color: 'var(--text-secondary)', padding: '16px 0', textAlign: 'center' }}>
-                No monthly targets configured yet. Click above to set this month's revenue and sales volume goals.
+              <div className="money-cell">
+                <dt>Expenses</dt>
+                <dd className="num">{money(summary?.monthly_expenses)}</dd>
               </div>
-            )}
-          </Card>
-
-          {/* Business Action Center Card */}
-          <Card padding="lg">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CheckCircle2 size={18} style={{ color: '#10B981' }} />
-                <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, margin: 0 }}>
-                  Business Action Center
-                </h3>
+              <div className="money-cell">
+                <dt>Gross profit</dt>
+                <dd className="num">{money(summary?.gross_profit)}</dd>
               </div>
-              <Badge variant={actionItems.length > 0 ? 'warning' : 'success'}>
-                {actionItems.length} Pending Actions
-              </Badge>
-            </div>
-
-            {actionItems.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                <CheckCircle2 size={32} style={{ color: '#10B981', margin: '0 auto 8px auto', display: 'block' }} />
-                All operational metrics are currently optimal. No urgent actions pending!
+              <div className="money-cell">
+                <dt>Margin</dt>
+                <dd className="num">{Number(summary?.gross_profit_margin || 0).toFixed(1)}%</dd>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
-                {actionItems.map(act => (
-                  <div
-                    key={act.id}
-                    style={{
-                      padding: '10px 12px',
-                      backgroundColor: 'var(--bg-root)',
-                      borderRadius: 'var(--radius-md)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: '10px',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>
-                        {act.title}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                        {act.description}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => navigate(act.navigation_path)}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: 'var(--radius-sm)',
-                        backgroundColor: 'var(--color-brand)',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <span>{act.action_label}</span>
-                      <ArrowRight size={12} />
-                    </button>
-                  </div>
-                ))}
+            </dl>
+
+            <div className="plan-block">
+              <div className="plan-block-head">
+                <span>Against the month's plan</span>
+                <span className="meta">{summary?.monthly_sales_volume || 0} bills so far</span>
               </div>
-            )}
-          </Card>
-        </div>
-      )}
 
-      {/* Main Charts & Analytics Row */}
-      {role !== 'STAFF' && (
-        <Card padding="lg">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: 'var(--space-4)' }}>
-            <div>
-              <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, margin: 0 }}>
-                Sales & Revenue Trajectory
-              </h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: '4px 0 0 0' }}>
-                Deterministic rolling volume from realized POS transactions
-              </p>
-            </div>
-
-            {/* Time Window Selector */}
-            <div style={{ display: 'flex', backgroundColor: 'var(--bg-root)', borderRadius: 'var(--radius-md)', padding: '2px' }}>
-              {['7d', '30d', '90d'].map(range => (
-                <button
-                  key={range}
-                  onClick={() => setSelectedRange(range)}
-                  style={{
-                    padding: '4px 12px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: 'none',
-                    backgroundColor: selectedRange === range ? 'var(--bg-surface)' : 'transparent',
-                    color: selectedRange === range ? 'var(--color-brand)' : 'var(--text-secondary)',
-                    fontWeight: selectedRange === range ? 600 : 500,
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    boxShadow: selectedRange === range ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  }}
-                >
-                  {range.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ height: '280px', width: '100%' }}>
-            {filteredTrends.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={filteredTrends} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#4F46E5" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" />
-                  <XAxis dataKey="date" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
-                  <YAxis stroke="var(--text-secondary)" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'var(--bg-surface)',
-                      borderColor: 'var(--border-subtle)',
-                      borderRadius: 'var(--radius-md)',
-                      fontSize: '12px',
-                    }}
+              {goals ? (
+                <div className="plan-list">
+                  <PlanRow
+                    label="Revenue"
+                    actual={goals.actual_revenue}
+                    target={goals.target_revenue}
+                    percent={Number(goals.revenue_achievement_rate || 0).toFixed(0)}
+                    footnote={
+                      Number(goals.remaining_revenue_deficit) > 0
+                        ? `${money(goals.remaining_revenue_deficit)} to go`
+                        : `${money(Number(goals.actual_revenue) - Number(goals.target_revenue))} over plan`
+                    }
                   />
-                  <Area type="monotone" dataKey="sales_count" stroke="#4F46E5" strokeWidth={2} fillOpacity={1} fill="url(#salesGrad)" name="Orders" />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                No sales records found in selected interval
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* Top Products & Anomaly Detection Feed */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 'var(--space-6)' }}>
-        {/* Top Products */}
-        <Card padding="lg">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, margin: 0 }}>
-              Top Moving Products (30 Days)
-            </h3>
-            <button
-              onClick={() => navigate('/inventory')}
-              style={{ background: 'none', border: 'none', color: 'var(--color-brand)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-            >
-              Full Catalog &rarr;
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {summary?.top_products && summary.top_products.length > 0 ? (
-              summary.top_products.map((p, idx) => (
-                <div
-                  key={p.product_id || idx}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '8px 12px',
-                    borderRadius: 'var(--radius-md)',
-                    backgroundColor: 'var(--bg-root)',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '13px' }}>{p.product_name}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>SKU: {p.sku} | In Stock: {p.stock_quantity}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--color-brand)', fontSize: '13px' }}>{p.units_sold} units</div>
-                    {p.revenue && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                        ₹{Number(p.revenue).toLocaleString('en-IN')}
-                      </div>
-                    )}
-                  </div>
+                  <PlanRow
+                    label="Bills"
+                    actual={goals.actual_sales_volume}
+                    target={goals.target_sales_volume}
+                    unit="count"
+                    percent={Number(goals.volume_achievement_rate || 0).toFixed(0)}
+                    footnote={
+                      Number(goals.target_sales_volume) - Number(goals.actual_sales_volume) > 0
+                        ? `${Number(goals.target_sales_volume) - Number(goals.actual_sales_volume)} bills short`
+                        : 'Plan met'
+                    }
+                  />
                 </div>
-              ))
-            ) : (
-              <div style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center', padding: '24px 0' }}>
-                No product movements recorded in this period.
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Business Health & Anomaly Feed (USP 4.2) */}
-        {role !== 'STAFF' && (
-          <Card padding="lg">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={18} style={{ color: 'var(--color-brand)' }} />
-                <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 700, margin: 0 }}>
-                  Business Health & Anomaly Feed
-                </h3>
-              </div>
-              <Badge variant="secondary">Rule-based Telemetry</Badge>
+              ) : (
+                <p className="panel-note">
+                  No plan for this month yet. A revenue and bill target makes next month's screen readable.
+                </p>
+              )}
             </div>
-
-            {anomalies.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                <CheckCircle2 size={32} style={{ color: '#10B981', margin: '0 auto 8px auto', display: 'block' }} />
-                No statistical anomalies detected. Store operations running within standard baselines.
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto' }}>
-                {anomalies.map(ano => (
-                  <div
-                    key={ano.id}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: 'var(--radius-md)',
-                      borderLeft: `4px solid ${ano.severity === 'HIGH' ? '#EF4444' : '#FFB800'}`,
-                      backgroundColor: 'var(--bg-root)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 700, fontSize: '12px', color: ano.severity === 'HIGH' ? '#EF4444' : '#D97706' }}>
-                        {ano.condition}
-                      </span>
-                      <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{ano.category}</span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginTop: '4px' }}>
-                      <strong>{ano.affected_entity}</strong>: {ano.observed_value}
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      <em>Action:</em> {ano.suggested_action}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+          </article>
         )}
-      </div>
 
-      {/* Goal Configuration Modal */}
-      {isGoalModalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '16px',
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: 'var(--bg-surface)',
-              borderRadius: 'var(--radius-xl)',
-              padding: '24px',
-              maxWidth: '440px',
-              width: '100%',
-              boxShadow: '0 20px 48px rgba(0,0,0,0.2)',
-            }}
-          >
-            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, margin: '0 0 16px 0' }}>
-              Set Monthly Performance Target
-            </h3>
-
-            <form onSubmit={handleSaveGoal} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Target Revenue (INR)
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step="1000"
-                  value={goalRevenueInput}
-                  onChange={e => setGoalRevenueInput(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-subtle)',
-                    backgroundColor: 'var(--bg-root)',
-                    color: 'var(--text-primary)',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                  Target Order Volume (Units)
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={goalVolumeInput}
-                  onChange={e => setGoalVolumeInput(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-subtle)',
-                    backgroundColor: 'var(--bg-root)',
-                    color: 'var(--text-primary)',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-                <Button type="button" variant="secondary" onClick={() => setIsGoalModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary" disabled={isSavingGoal}>
-                  {isSavingGoal ? 'Saving...' : 'Save Target'}
-                </Button>
-              </div>
-            </form>
+        <article className="panel">
+          <div className="panel-head">
+            <h2 className="section-title">Top sellers</h2>
+            <span className="meta">Last 30 days</span>
           </div>
-        </div>
-      )}
+
+          {summary?.top_products?.length ? (
+            <table className="sell-table">
+              <thead>
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col" className="num">Sold</th>
+                  <th scope="col" className="num">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.top_products.slice(0, 5).map((product) => (
+                  <tr key={product.product_id || product.sku}>
+                    <td className="sell-name" title={product.product_name}>
+                      {product.product_name}
+                      <span className="sell-stock">{product.stock_quantity} in stock</span>
+                    </td>
+                    <td className="num">{product.units_sold}</td>
+                    <td className="num">{money(product.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="panel-note">No item has sold in the last 30 days.</p>
+          )}
+
+          <button className="panel-link" onClick={() => navigate('/inventory')}>
+            <span>See the catalogue</span>
+            <ArrowRight size={14} aria-hidden="true" />
+          </button>
+        </article>
+
+        {!canSeeMoney && (
+          <article className="panel">
+            <div className="panel-head">
+              <h2 className="section-title">Stock</h2>
+              <button className="link-action" onClick={() => navigate('/inventory')}>
+                See stock
+              </button>
+            </div>
+            <dl className="money-grid three">
+              <div className="money-cell">
+                <dt>Items in the catalogue</dt>
+                <dd className="num">{summary?.total_products || 0}</dd>
+              </div>
+              <div className="money-cell">
+                <dt>At its reorder point</dt>
+                <dd className="num">{summary?.low_stock_count || 0}</dd>
+              </div>
+              <div className="money-cell">
+                <dt>Out of stock</dt>
+                <dd className="num">{summary?.out_of_stock_count || 0}</dd>
+              </div>
+            </dl>
+            <p className="panel-note tight">
+              Counts come from the catalogue's stock levels. Open Stock to reorder or adjust an item.
+            </p>
+          </article>
+        )}
+      </section>
+
+      <Modal
+        isOpen={isPlanOpen}
+        onClose={() => setIsPlanOpen(false)}
+        title="This month's plan"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsPlanOpen(false)}>Cancel</Button>
+            <Button variant="primary" type="submit" form="plan-form" isLoading={isSavingPlan}>
+              Save the plan
+            </Button>
+          </>
+        }
+      >
+        <form id="plan-form" onSubmit={savePlan} className="plan-form">
+          <Input
+            label="Revenue target for the month (₹)"
+            type="number"
+            min="0"
+            step="500"
+            value={planRevenue}
+            onChange={(event) => setPlanRevenue(event.target.value)}
+            required
+          />
+          <Input
+            label="Bills to take"
+            type="number"
+            min="0"
+            step="1"
+            value={planBills}
+            onChange={(event) => setPlanBills(event.target.value)}
+            required
+          />
+          <p className="meta">
+            The plan is compared against the month's billed total, not against what the shop hoped for.
+          </p>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -1,27 +1,29 @@
+/* A panel is a white surface on the ledger ground, separated by one 1px edge.
+ * No shadow, no lift on hover: a card that can be opened says so with a
+ * darker edge, not with movement. */
+
 .card {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
   overflow: hidden;
-  transition: all var(--transition-normal);
 }
 
 .card-p-none { padding: 0; }
-.card-p-sm { padding: var(--space-4); }
-.card-p-md { padding: var(--space-6); }
-.card-p-lg { padding: var(--space-8); }
+.card-p-sm { padding: 14px; }
+.card-p-md { padding: var(--card-pad); }
+.card-p-lg { padding: 24px; }
 
 .card-interactive {
   cursor: pointer;
+  transition: border-color var(--transition-fast);
 }
 
 .card-interactive:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-strong);
+  border-color: var(--control);
 }
 
-.card-interactive:active {
-  transform: translateY(0);
+.card-interactive:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

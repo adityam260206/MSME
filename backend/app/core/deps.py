@@ -50,3 +50,50 @@ def require_roles(*allowed_roles: str) -> Callable[[User], User]:
             )
         return current_user
     return role_checker
+
+def require_role(allowed_roles: List[str]) -> Callable[[User], User]:
+    """Alias for require_roles supporting list syntax."""
+    return require_roles(*allowed_roles)
+
+def get_current_customer(
+    authorization: str = Header(None),
+    db: Session = Depends(get_db),
+):
+    """Validate Bearer JWT for customer portal and return active Customer instance."""
+    from backend.app.models.customer import Customer
+
+    if not authorization or not authorization.startswith("Bearer "):
+        raise InvalidCredentialsException("Missing or malformed Authorization header")
+
+    token = authorization.split(" ")[1]
+    try:
+        payload = decode_access_token(token)
+    except jwt.ExpiredSignatureError:
+        raise AppException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            message="Customer session has expired, please log in again",
+            error_code="TOKEN_EXPIRED",
+        )
+    except jwt.PyJWTError:
+        raise InvalidCredentialsException("Invalid token signature or payload")
+
+    customer_id: str = payload.get("sub")
+    tenant_id: str = payload.get("tenant_id")
+    role: str = payload.get("role")
+
+    if not customer_id or not tenant_id:
+        raise InvalidCredentialsException("Token missing customer subject or tenant claim")
+
+    if role != "CUSTOMER":
+        raise ForbiddenException("Access restricted to authenticated customers")
+
+    customer = db.query(Customer).filter(
+        Customer.id == customer_id,
+        Customer.tenant_id == tenant_id,
+    ).first()
+    if not customer:
+        raise InvalidCredentialsException("Customer profile not found")
+    if not customer.is_active:
+        raise ForbiddenException("Customer account is deactivated")
+
+    return customer

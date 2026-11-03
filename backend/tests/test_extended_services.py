@@ -230,3 +230,75 @@ def test_employee_deactivate(client, seed_test_tenant, db_session):
     resp = client.post(f"/api/business/employees/{emp.id}/deactivate", headers=admin_headers)
     assert resp.status_code == 200
     assert resp.json()["data"]["is_active"] is False
+
+def test_product_lifecycle_and_archive(client, seed_test_tenant):
+    admin_headers = get_auth_header(seed_test_tenant["admin"])
+    cat = seed_test_tenant["category"]
+
+    # 1. Create product
+    resp = client.post(
+        "/api/inventory/products",
+        headers=admin_headers,
+        json={
+            "name": "Barcode Scanner Pro",
+            "sku": "SCAN-PRO-001",
+            "category_id": cat.id,
+            "cost_price": "1200.00",
+            "selling_price": "1999.00",
+            "stock_quantity": 25,
+            "min_stock_level": 5,
+            "lead_time_days": 4,
+            "safety_stock": 8,
+        }
+    )
+    assert resp.status_code == 200
+    prod_data = resp.json()["data"]
+    prod_id = prod_data["id"]
+    assert prod_data["name"] == "Barcode Scanner Pro"
+    assert prod_data["stock_status"] == "IN_STOCK"
+    assert prod_data["category_name"] == cat.name
+
+    # 2. Filter by stock_status
+    resp_filter = client.get("/api/inventory/products?stock_status=IN_STOCK", headers=admin_headers)
+    assert resp_filter.status_code == 200
+    assert any(p["id"] == prod_id for p in resp_filter.json()["data"])
+
+    # 3. Update product
+    resp_edit = client.put(
+        f"/api/inventory/products/{prod_id}",
+        headers=admin_headers,
+        json={"selling_price": "2199.00"}
+    )
+    assert resp_edit.status_code == 200
+    assert float(resp_edit.json()["data"]["selling_price"]) == 2199.00
+
+    # 4. Soft-delete / Archive product
+    resp_del = client.delete(f"/api/inventory/products/{prod_id}", headers=admin_headers)
+    assert resp_del.status_code == 200
+    assert resp_del.json()["success"] is True
+
+    # 5. Archived product should not appear in active products list
+    resp_list = client.get("/api/inventory/products", headers=admin_headers)
+    assert resp_list.status_code == 200
+    assert all(p["id"] != prod_id for p in resp_list.json()["data"])
+
+def test_category_empty_parent_and_supplier_empty_email(client, seed_test_tenant):
+    admin_headers = get_auth_header(seed_test_tenant["admin"])
+
+    # Empty parent_id should be treated as None without FK error
+    resp_cat = client.post(
+        "/api/inventory/categories",
+        headers=admin_headers,
+        json={"name": "Sanitized Root Category", "parent_id": ""}
+    )
+    assert resp_cat.status_code == 200
+    assert resp_cat.json()["data"]["parent_id"] is None
+
+    # Empty string email should be treated as None without validation error
+    resp_sup = client.post(
+        "/api/business/suppliers",
+        headers=admin_headers,
+        json={"name": "No Email Vendor", "email": "", "phone": "1234567890"}
+    )
+    assert resp_sup.status_code == 200
+    assert resp_sup.json()["data"]["email"] is None

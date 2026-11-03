@@ -1,29 +1,33 @@
+/* The canvas. One gutter value at every width, and the same one vertically, so
+ * every screen shares one left edge and one right edge.
+ * 1440 window: 248 sidebar + 1 hairline + 40 gutter + 1111 content + 40 gutter. */
+
 .app-shell {
   display: flex;
-  height: 100vh;
-  overflow: hidden;
-  background-color: var(--bg-root);
+  min-height: 100vh;
+  background: var(--ground);
 }
 
 .app-main {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0; /* Prevents flex children from blowing out width */
 }
 
 .app-content {
   flex: 1;
-  padding: var(--space-6);
-  overflow-y: auto;
-  max-width: 1400px;
-  margin: 0 auto;
   width: 100%;
+  padding: 32px var(--pad) 64px;
 }
 
-/* Mobile responsiveness */
-@media (max-width: 768px) {
+/* Below the tablet break the sidebar folds into a top bar, so the shell stacks. */
+@media (max-width: 900px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
   .app-content {
-    padding: var(--space-4);
+    padding-top: 20px;
   }
 }

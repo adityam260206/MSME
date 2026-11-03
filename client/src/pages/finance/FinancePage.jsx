@@ -4,7 +4,9 @@ import {
   Plus,
   Lock,
   Clock,
-  PieChart
+  PieChart,
+  ShieldCheck,
+  Award
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { ToastContext } from '../../context/ToastContext';
@@ -13,12 +15,14 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import api from '../../api/client';
+import CreditRiskTab from './CreditRiskTab';
+import SchemeEligibilityTab from './SchemeEligibilityTab';
 
 export default function FinancePage() {
   const { role } = useContext(AuthContext);
   const { showToast } = useContext(ToastContext);
 
-  // Tab navigation: 'ledger' | 'cashflow' | 'profitability'
+  // Tab navigation: 'ledger' | 'cashflow' | 'profitability' | 'credit-risk' | 'schemes'
   const [activeTab, setActiveTab] = useState('ledger');
 
   const [summary, setSummary] = useState(null);
@@ -179,7 +183,7 @@ export default function FinancePage() {
 
         {activeTab === 'ledger' && (
           <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-            <Plus size={16} style={{ marginRight: '6px' }} />
+            <Plus size={16} />
             Record Operating Expense
           </Button>
         )}
@@ -245,6 +249,46 @@ export default function FinancePage() {
         >
           <PieChart size={16} />
           <span>Product Profitability Intelligence</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('credit-risk')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 'var(--radius-md)',
+            border: 'none',
+            backgroundColor: activeTab === 'credit-risk' ? 'var(--color-brand)' : 'transparent',
+            color: activeTab === 'credit-risk' ? '#FFFFFF' : 'var(--text-secondary)',
+            fontWeight: 600,
+            fontSize: '13px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <ShieldCheck size={16} />
+          <span>Enterprise Credit & Risk Scoring</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('schemes')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: 'var(--radius-md)',
+            border: 'none',
+            backgroundColor: activeTab === 'schemes' ? 'var(--color-brand)' : 'transparent',
+            color: activeTab === 'schemes' ? '#FFFFFF' : 'var(--text-secondary)',
+            fontWeight: 600,
+            fontSize: '13px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <Award size={16} />
+          <span>Govt & Bank Scheme Eligibility</span>
         </button>
       </div>
 
@@ -676,6 +720,12 @@ export default function FinancePage() {
           </Card>
         </div>
       )}
+
+      {/* TAB 4: ENTERPRISE CREDIT & RISK SCORING (Feature 1) */}
+      {activeTab === 'credit-risk' && <CreditRiskTab />}
+
+      {/* TAB 5: GOVT & BANKING SCHEME ELIGIBILITY (Feature 2) */}
+      {activeTab === 'schemes' && <SchemeEligibilityTab />}
 
       {/* MODAL: RECORD EXPENSE */}
       {isModalOpen && (

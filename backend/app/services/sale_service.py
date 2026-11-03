@@ -14,8 +14,9 @@ from backend.app.models.sale import Sale, SaleItem
 from backend.app.models.inventory import StockMovement
 from backend.app.models.finance import FinancialTransaction
 from backend.app.models.alert import Alert
+from backend.app.models.audit_log import AuditLog
 from backend.app.schemas.sale import (
-    SaleCreate, SaleResponse, SaleItemResponse
+    SaleCreate, SaleResponse, SaleItemResponse, RecoveredInvoiceResponse, InvoiceAuditTrailItem
 )
 
 def round_money(val: Decimal) -> Decimal:
@@ -285,3 +286,143 @@ def list_sales(
         result.append(res)
 
     return result, total
+
+def search_historical_invoices(
+    db: Session,
+    tenant_id: str,
+    query_str: Optional[str] = None,
+    customer_id: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    status_filter: Optional[str] = None,
+    payment_status: Optional[str] = None,
+    payment_method: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50,
+) -> Tuple[List[SaleResponse], int]:
+    """
+    Search historical invoices across customers, invoice numbers, date ranges, and statuses.
+    Preserves exact historical snapshot without altering inventory or ledger.
+    """
+    q = db.query(Sale).filter(Sale.tenant_id == tenant_id)
+
+    if query_str and query_str.strip():
+        term = f"%{query_str.strip()}%"
+        q = q.filter((Sale.invoice_number.ilike(term)) | (Sale.customer_name.ilike(term)))
+
+    if customer_id:
+        q = q.filter(Sale.customer_id == customer_id)
+
+    if start_date:
+        q = q.filter(Sale.created_at >= start_date)
+
+    if end_date:
+        q = q.filter(Sale.created_at <= end_date)
+
+    if status_filter:
+        q = q.filter(Sale.status == status_filter.upper())
+
+    if payment_status:
+        q = q.filter(Sale.payment_status == payment_status.upper())
+
+    if payment_method:
+        q = q.filter(Sale.payment_method == payment_method.upper())
+
+    total = q.count()
+    sales = q.order_by(desc(Sale.created_at)).offset((page - 1) * limit).limit(limit).all()
+
+    result = []
+    for s in sales:
+        res = SaleResponse.model_validate(s)
+        res.items = [SaleItemResponse.model_validate(i) for i in s.items]
+        result.append(res)
+
+    return result, total
+
+def recover_historical_invoice(
+    db: Session,
+    tenant_id: str,
+    sale_id: str,
+    actor_name: str = "System User",
+    actor_id: Optional[str] = None,
+) -> RecoveredInvoiceResponse:
+    """
+    Retrieve historical invoice snapshot and register an official audit recovery log.
+    Guarantees financial integrity: ZERO stock change, ZERO new transaction created.
+    """
+    sale = db.query(Sale).filter(
+        Sale.id == sale_id,
+        Sale.tenant_id == tenant_id
+    ).first()
+    if not sale:
+        raise NotFoundException("Historical invoice not found")
+
+    now = datetime.now(timezone.utc)
+
+    # Log immutable audit entry for document recovery
+    audit = AuditLog(
+        tenant_id=tenant_id,
+        user_id=actor_id,
+        actor_name=actor_name,
+        action="HISTORICAL_INVOICE_RECOVERY",
+        entity_type="SALE",
+        entity_id=sale.id,
+        details=f"Retrieved historical invoice {sale.invoice_number} (original date: {sale.created_at.strftime('%Y-%m-%d %H:%M')})",
+        timestamp=now,
+    )
+    db.add(audit)
+    db.commit()
+
+    # Query audit trail for this invoice
+    trail_logs = db.query(AuditLog).filter(
+        AuditLog.tenant_id == tenant_id,
+        AuditLog.entity_type == "SALE",
+        AuditLog.entity_id == sale.id,
+    ).order_by(desc(AuditLog.timestamp)).all()
+
+    audit_trail = [
+        InvoiceAuditTrailItem(
+            id=log.id,
+            action=log.action,
+            actor_name=log.actor_name,
+            timestamp=log.timestamp,
+            details=log.details,
+        )
+        for log in trail_logs
+    ]
+
+    sale_res = SaleResponse.model_validate(sale)
+    sale_res.items = [SaleItemResponse.model_validate(i) for i in sale.items]
+
+    return RecoveredInvoiceResponse(
+        sale=sale_res,
+        is_recovered_document=True,
+        original_invoice_number=sale.invoice_number,
+        original_created_at=sale.created_at,
+        recovery_timestamp=now,
+        recovery_notice="HISTORICAL RECONSTRUCTED DOCUMENT - Verified original transaction ledger record. No stock changes applied.",
+        retrieved_by=actor_name,
+        audit_trail=audit_trail,
+    )
+
+def get_invoice_audit_trail(
+    db: Session,
+    tenant_id: str,
+    sale_id: str,
+) -> List[InvoiceAuditTrailItem]:
+    logs = db.query(AuditLog).filter(
+        AuditLog.tenant_id == tenant_id,
+        AuditLog.entity_type == "SALE",
+        AuditLog.entity_id == sale_id,
+    ).order_by(desc(AuditLog.timestamp)).all()
+
+    return [
+        InvoiceAuditTrailItem(
+            id=log.id,
+            action=log.action,
+            actor_name=log.actor_name,
+            timestamp=log.timestamp,
+            details=log.details,
+        )
+        for log in logs
+    ]

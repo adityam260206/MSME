@@ -38,3 +38,12 @@ Thumbs.db
 
 # Coverage
 coverage/
+
+# Local design work: screenshots, dealt direction, and the demo database copy
+.taste-skill/
+.tmp/
+.devdeps/
+backend/.pydeps/
+.agents/
+.qodo/
+.vendor-wheels/

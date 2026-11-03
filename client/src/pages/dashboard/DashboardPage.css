@@ -1,54 +1,534 @@
-.dashboard-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-6);
+/* Today — the screen a shop owner opens first.
+ *
+ * One question: did today's takings come in, and what needs me before I close?
+ * The day panel is the biggest block; the plan, the money strip and the sellers
+ * are the answers to the three questions that follow.
+ *
+ * Grid arithmetic at 1440: canvas 1111 wide.
+ *   band 1: 2fr 1fr with a 12px gap → 733 + 12 + 366 = 1111
+ *   band 2: three 1fr columns   → 362.3 × 3 + 12 × 2 = 1111
+ * Both rows land on the canvas' left and right edges.
+ */
+
+.today {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.dashboard-grid-layout {
+/* ── Title row ───────────────────────────────────────────────── */
+
+.title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.title-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.title-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.icon-quiet {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-chip);
+  color: var(--muted);
+}
+
+.icon-quiet:hover {
+  background: var(--raised);
+  color: var(--text);
+}
+
+/* ── Bands ───────────────────────────────────────────────────── */
+
+.band {
   display: grid;
-  grid-template-columns: 2fr 1fr; /* 66% / 33% split */
-  gap: var(--space-6);
+  gap: var(--gap);
   align-items: stretch;
 }
 
-.chart-legend {
-  margin-top: var(--space-4);
+.band-lead {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
+.band-month {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+}
+
+.band-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.panel {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  padding: var(--card-pad);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
 }
 
-.legend-item {
+.panel-head {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  font-size: var(--text-sm);
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  min-height: 26px;
 }
 
-.legend-color {
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-full);
+.panel-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
 }
 
-.legend-name {
-  flex: 1;
-  color: var(--text-secondary);
+.panel-note.tight {
+  margin-top: 12px;
 }
 
-.legend-value {
-  font-weight: var(--weight-medium);
-  color: var(--text-primary);
+.panel-link {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: left;
 }
 
-@media (max-width: 1024px) {
-  .dashboard-grid-layout {
-    grid-template-columns: 1fr;
+.panel-link:hover {
+  color: var(--text);
+}
+
+/* ── The day ─────────────────────────────────────────────────── */
+
+.day-figure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 2px 0 6px;
+}
+
+.day-value {
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.day-value-text {
+  font-size: 24px;
+}
+
+.day-caption {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.chart-wrap {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.takings-chart {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Two figures that belong to the day and to no other card. */
+.day-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+.day-cell dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.day-cell dd {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.chart-tick {
+  font-size: 11px;
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-note {
+  font-size: 11px;
+  fill: var(--muted);
+}
+
+.chart-note-accent {
+  fill: var(--accent);
+}
+
+.range-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--raised);
+  border-radius: var(--radius-control);
+}
+
+.range-btn {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-chip);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.range-btn:hover {
+  color: var(--text);
+}
+
+.range-btn.is-current {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ── Needs you ───────────────────────────────────────────────── */
+
+.count-tag {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.needs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.need-row {
+  padding: 12px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.need-row:first-child {
+  padding-top: 2px;
+  border-top: 0;
+}
+
+.need-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.need-text {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.need-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 7px;
+  font-size: 13px;
+}
+
+/* ── October to date: four figures in one panel ──────────────── */
+
+.money-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+}
+
+.money-grid.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.money-cell {
+  padding: 12px 14px 12px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.money-cell:nth-child(odd) {
+  border-right: 1px solid var(--rule);
+}
+
+.money-cell:nth-child(even) {
+  padding-left: 14px;
+  padding-right: 0;
+}
+
+.money-grid.three .money-cell:nth-child(even) {
+  padding-left: 14px;
+}
+
+.money-grid.three .money-cell:nth-child(3) {
+  padding-left: 14px;
+  border-right: 0;
+}
+
+.money-grid .money-cell:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+.money-grid.three .money-cell {
+  border-bottom: 0;
+}
+
+.money-cell dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.money-cell dd {
+  margin: 3px 0 0;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+/* ── The month's plan, inside the month panel ────────────────── */
+
+.plan-block {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.plan-block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.plan-row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.plan-row-label {
+  color: var(--text);
+}
+
+.plan-row-figures {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.plan-actual {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.plan-target {
+  color: var(--muted);
+}
+
+.plan-track {
+  height: 6px;
+  margin: 7px 0 5px;
+  border-radius: 999px;
+  background: var(--active);
+  overflow: hidden;
+}
+
+.plan-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--text);
+}
+
+.plan-fill.is-met {
+  background: var(--positive);
+}
+
+.plan-row-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.plan-over {
+  color: var(--positive);
+}
+
+.plan-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Top sellers ─────────────────────────────────────────────── */
+
+.sell-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: -4px;
+}
+
+.sell-table th {
+  height: 30px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.sell-table th.num,
+.sell-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sell-table td {
+  padding: 9px 0;
+  font-size: 13px;
+  color: var(--text);
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+.sell-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.sell-name {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sell-stock {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ── States ──────────────────────────────────────────────────── */
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-card);
+  background: var(--pill-warning-bg);
+  color: var(--pill-warning-ink);
+  font-size: 13px;
+}
+
+.skeleton-bar,
+.skeleton-panel {
+  background: var(--active);
+  border-radius: var(--radius-chip);
+}
+
+.skeleton-panel {
+  border-radius: var(--radius-card);
+}
+
+/* ── Narrower canvases ───────────────────────────────────────── */
+
+@media (max-width: 1180px) {
+  .band-lead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .band-month {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (max-width: 768px) {
-  .dashboard-grid-3 {
-    grid-template-columns: 1fr;
+@media (max-width: 760px) {
+  .band-month,
+  .band-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .day-value {
+    font-size: 28px;
+  }
+
+  .title-row {
+    align-items: flex-start;
+  }
+
+  .title-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .title-actions .freshness {
+    order: -1;
+    width: 100%;
   }
 }

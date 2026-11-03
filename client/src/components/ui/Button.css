@@ -1,43 +1,48 @@
+/* One filled action per screen, near-black. Secondary is a white control with
+ * a 1px border; tertiary is text. Nothing at rest casts a shadow. */
+
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
+  gap: 6px;
   font-family: inherit;
-  font-weight: var(--weight-medium);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
-  position: relative;
-  overflow: hidden;
+  font-weight: 500;
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .btn:disabled {
-  opacity: 0.6;
   cursor: not-allowed;
+  color: var(--faint);
+  background: var(--raised);
+  border-color: var(--border);
 }
 
 .btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: translateY(1px);
 }
 
 /* ── Sizes ── */
 
 .btn-sm {
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-sm);
-  height: 32px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 13px;
 }
 
 .btn-md {
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--text-base);
-  height: 40px;
+  height: 34px;
+  padding: 0 14px;
+  font-size: var(--fs-body);
 }
 
 .btn-lg {
-  padding: var(--space-3) var(--space-6);
-  font-size: var(--text-lg);
-  height: 48px;
+  height: 40px;
+  padding: 0 18px;
+  font-size: var(--fs-body);
 }
 
 .btn-full {
@@ -47,45 +52,62 @@
 /* ── Variants ── */
 
 .btn-primary {
-  background-color: var(--color-brand);
-  color: #FFFFFF;
-  box-shadow: var(--shadow-sm);
+  background: var(--primary);
+  color: var(--surface);
+}
+
+html[data-theme='dark'] .btn-primary {
+  color: #0e0f11;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--color-brand-hover);
-  box-shadow: var(--shadow-md);
+  background: var(--primary-hover);
 }
 
 .btn-secondary {
-  background-color: var(--bg-surface-active);
-  color: var(--text-primary);
+  background: var(--surface);
+  border-color: var(--control);
+  color: var(--text);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: var(--border-subtle);
+  background: var(--raised);
 }
 
 .btn-danger {
-  background-color: var(--color-danger);
-  color: #FFFFFF;
+  background: var(--negative);
+  color: #ffffff;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: var(--color-danger-hover);
+  background: var(--color-danger-hover);
 }
 
 .btn-ghost {
-  background-color: transparent;
-  color: var(--text-secondary);
+  background: transparent;
+  color: var(--muted);
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background-color: var(--bg-surface-active);
-  color: var(--text-primary);
+  background: var(--raised);
+  color: var(--text);
 }
 
-/* ── Loading Spinner ── */
+/* ── Content & icon alignment ── */
+
+.btn-content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1;
+}
+
+.btn-content svg {
+  flex-shrink: 0;
+}
+
+/* ── Loading ── */
 
 .btn-loading .btn-content {
   opacity: 0;
@@ -98,9 +120,16 @@
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
-  animation: spin 0.75s linear infinite;
+  animation: btn-spin 0.7s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.btn {
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

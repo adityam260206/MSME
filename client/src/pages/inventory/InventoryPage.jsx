@@ -15,7 +15,8 @@ import {
   Truck,
   ArrowRight,
   TrendingUp,
-  Info
+  Info,
+  Trash2,
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { ToastContext } from '../../context/ToastContext';
@@ -84,6 +85,22 @@ export default function InventoryPage() {
   });
 
   const canManage = ['ADMIN', 'OWNER', 'MANAGER'].includes(role);
+  const canDelete = ['ADMIN', 'OWNER'].includes(role);
+
+  const handleDeleteProduct = async (prod) => {
+    if (!window.confirm(`Are you sure you want to archive product "${prod.name}" (SKU: ${prod.sku})? It will be deactivated from the catalog.`)) {
+      return;
+    }
+    try {
+      const { data } = await api.delete(`/inventory/products/${prod.id}`);
+      if (data.success) {
+        showToast(`Product "${prod.name}" archived successfully`, 'success');
+        loadProducts();
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
 
   const loadCategories = async () => {
     try {
@@ -102,7 +119,7 @@ export default function InventoryPage() {
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (selectedCategory) params.append('category_id', selectedCategory);
-      if (selectedStatus) params.append('status', selectedStatus);
+      if (selectedStatus) params.append('stock_status', selectedStatus);
       params.append('page', page);
       params.append('limit', 15);
 
@@ -181,11 +198,15 @@ export default function InventoryPage() {
 
   const handleSaveProduct = async (e) => {
     e.preventDefault();
+    if (!productForm.category_id) {
+      showToast('Please select a product category', 'error');
+      return;
+    }
     try {
       const payload = {
-        name: productForm.name,
-        sku: productForm.sku,
-        category_id: productForm.category_id || null,
+        name: productForm.name.trim(),
+        sku: productForm.sku.trim(),
+        category_id: productForm.category_id,
         cost_price: parseFloat(productForm.cost_price),
         selling_price: parseFloat(productForm.selling_price),
         min_stock_level: parseInt(productForm.min_stock_level, 10),
@@ -273,12 +294,12 @@ export default function InventoryPage() {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'IN_STOCK':
-        return <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700 }}>IN STOCK</span>;
+        return <Badge variant="success">In stock</Badge>;
       case 'LOW_STOCK':
-        return <span style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700 }}>LOW STOCK</span>;
+        return <Badge variant="warning">Low stock</Badge>;
       case 'OUT_OF_STOCK':
       default:
-        return <span style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700 }}>OUT OF STOCK</span>;
+        return <Badge variant="danger">Out of stock</Badge>;
     }
   };
 
@@ -298,11 +319,11 @@ export default function InventoryPage() {
   return (
     <div style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
       {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="page-head">
         <div>
-          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>Inventory & Catalog</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '4px 0 0 0' }}>
-            Multi-Tenant Product Catalog, Stock Balances & Immutable Ledger ({totalProducts} SKUs)
+          <h1 className="page-title">Stock</h1>
+          <p className="page-sub">
+            {totalProducts} products across {categories.length} categories, with live stock balances.
           </p>
         </div>
 
@@ -321,70 +342,40 @@ export default function InventoryPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
+      <div className="tabs" role="tablist" aria-label="Stock views">
         <button
+          role="tab"
+          aria-selected={activeTab === 'catalog'}
           onClick={() => setActiveTab('catalog')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            backgroundColor: activeTab === 'catalog' ? 'var(--color-brand)' : 'transparent',
-            color: activeTab === 'catalog' ? '#FFFFFF' : 'var(--text-secondary)',
-            fontWeight: 600,
-            fontSize: '13px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
+          className={`tab${activeTab === 'catalog' ? ' is-current' : ''}`}
         >
-          <Package size={16} />
-          <span>Catalog Products ({totalProducts})</span>
+          <Package size={15} aria-hidden="true" />
+          <span>Products</span>
+          <span className="tab-count">{totalProducts}</span>
         </button>
 
         <button
+          role="tab"
+          aria-selected={activeTab === 'categories'}
           onClick={() => setActiveTab('categories')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            backgroundColor: activeTab === 'categories' ? 'var(--color-brand)' : 'transparent',
-            color: activeTab === 'categories' ? '#FFFFFF' : 'var(--text-secondary)',
-            fontWeight: 600,
-            fontSize: '13px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
+          className={`tab${activeTab === 'categories' ? ' is-current' : ''}`}
         >
-          <FolderPlus size={16} />
-          <span>Categories ({categories.length})</span>
+          <FolderPlus size={15} aria-hidden="true" />
+          <span>Categories</span>
+          <span className="tab-count">{categories.length}</span>
         </button>
 
         {canManage && (
           <button
+            role="tab"
+            aria-selected={activeTab === 'replenishment'}
             onClick={() => setActiveTab('replenishment')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 'var(--radius-md)',
-              border: 'none',
-              backgroundColor: activeTab === 'replenishment' ? 'var(--color-brand)' : 'transparent',
-              color: activeTab === 'replenishment' ? '#FFFFFF' : 'var(--text-secondary)',
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
+            className={`tab${activeTab === 'replenishment' ? ' is-current' : ''}`}
           >
-            <Sparkles size={16} />
-            <span>Smart Replenishment Planner</span>
+            <Sparkles size={15} aria-hidden="true" />
+            <span>Replenishment</span>
             {replenishmentPlan?.total_reorder_items_count > 0 && (
-              <span style={{ backgroundColor: '#EF4444', color: '#fff', fontSize: '10px', padding: '1px 6px', borderRadius: '10px', fontWeight: 700 }}>
-                {replenishmentPlan.total_reorder_items_count}
-              </span>
+              <span className="tab-count">{replenishmentPlan.total_reorder_items_count} to reorder</span>
             )}
           </button>
         )}
@@ -485,7 +476,7 @@ export default function InventoryPage() {
                           <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{prod.sku}</div>
                         </td>
                         <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>
-                          {prod.category?.name || 'Uncategorized'}
+                          {prod.category_name || prod.category?.name || 'General'}
                         </td>
                         <td style={{ padding: '12px 16px' }}>
                           {['ADMIN', 'OWNER', 'MANAGER'].includes(role) ? `₹${parseFloat(prod.cost_price).toFixed(2)}` : '—'}
@@ -502,14 +493,14 @@ export default function InventoryPage() {
                           </span>
                         </td>
                         <td style={{ padding: '12px 16px' }}>
-                          {getStatusBadge(prod.status)}
+                          {getStatusBadge(prod.stock_status || prod.status)}
                         </td>
                         <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '6px' }}>
+                          <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
                             {canManage && (
                               <button
                                 onClick={() => handleOpenAdjust(prod)}
-                                style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                                style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                                 title="Adjust Stock"
                               >
                                 <SlidersHorizontal size={13} />
@@ -517,22 +508,34 @@ export default function InventoryPage() {
                               </button>
                             )}
 
-                            <button
-                              onClick={() => handleOpenHistory(prod)}
-                              style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
-                              title="Audit Movements"
-                            >
-                              <History size={13} />
-                              Ledger
-                            </button>
+                            {canManage && (
+                              <button
+                                onClick={() => handleOpenHistory(prod)}
+                                style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                title="Stock Movement History"
+                              >
+                                <History size={13} />
+                                Movements
+                              </button>
+                            )}
 
                             {canManage && (
                               <button
                                 onClick={() => handleOpenProductModal(prod)}
-                                style={{ padding: '6px', borderRadius: '4px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', cursor: 'pointer' }}
+                                style={{ padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                                 title="Edit Product"
                               >
                                 <Edit2 size={13} />
+                              </button>
+                            )}
+
+                            {canDelete && (
+                              <button
+                                onClick={() => handleDeleteProduct(prod)}
+                                style={{ padding: '6px 8px', borderRadius: '4px', border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', cursor: 'pointer', color: '#EF4444', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                title="Archive Product"
+                              >
+                                <Trash2 size={13} />
                               </button>
                             )}
                           </div>
@@ -758,14 +761,15 @@ export default function InventoryPage() {
             />
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                Category
+                Category *
               </label>
               <select
+                required
                 value={productForm.category_id}
                 onChange={(e) => setProductForm({ ...productForm, category_id: e.target.value })}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-root)', color: 'var(--text-primary)' }}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-root)', color: 'var(--text-primary)', fontSize: '13px' }}
               >
-                <option value="">Select Category</option>
+                <option value="">Select Category...</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
@@ -846,7 +850,12 @@ export default function InventoryPage() {
             onSubmit={async (e) => {
               e.preventDefault();
               try {
-                await api.post('/inventory/categories', categoryForm);
+                const payload = {
+                  name: categoryForm.name.trim(),
+                  description: categoryForm.description ? categoryForm.description.trim() : null,
+                  parent_id: categoryForm.parent_id || null,
+                };
+                await api.post('/inventory/categories', payload);
                 showToast('Category created successfully', 'success');
                 setIsCategoryModalOpen(false);
                 setCategoryForm({ name: '', description: '', parent_id: '' });
@@ -906,9 +915,7 @@ export default function InventoryPage() {
                 onChange={(e) => setAdjustForm({ ...adjustForm, movement_type: e.target.value })}
                 style={{ width: '100%', padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-root)', color: 'var(--text-primary)' }}
               >
-                <option value="ADJUSTMENT">Standard Stock Audit Correction</option>
-                <option value="DAMAGE">Damaged / Expired Goods</option>
-                <option value="INTERNAL_USE">Internal Store Use</option>
+                <option value="ADJUSTMENT">Stock Audit / Manual Adjustment</option>
                 <option value="RETURN">Customer Return Restock</option>
               </select>
             </div>
@@ -927,12 +934,12 @@ export default function InventoryPage() {
         </Modal>
       )}
 
-      {/* DRAWER: MOVEMENT AUDIT LEDGER */}
+      {/* DRAWER: MOVEMENT AUDIT HISTORY */}
       {isHistoryOpen && historyTargetProduct && (
         <Modal
           isOpen={isHistoryOpen}
           onClose={() => setIsHistoryOpen(false)}
-          title={`Stock Movement Ledger: ${historyTargetProduct.name}`}
+          title={`Stock Movement History: ${historyTargetProduct.name}`}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '400px', overflowY: 'auto' }}>
             {historyMovements.length === 0 ? (
@@ -952,11 +959,14 @@ export default function InventoryPage() {
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 700, fontSize: '14px', color: m.quantity_change > 0 ? '#10B981' : '#EF4444' }}>
-                      {m.quantity_change > 0 ? `+${m.quantity_change}` : m.quantity_change}
+                    <div style={{ fontWeight: 700, fontSize: '14px', color: (m.quantity != null ? m.quantity : m.quantity_change) > 0 ? '#10B981' : '#EF4444' }}>
+                      {(m.quantity != null ? m.quantity : m.quantity_change) > 0 ? `+${m.quantity != null ? m.quantity : m.quantity_change}` : (m.quantity != null ? m.quantity : m.quantity_change)}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                      New Balance: {m.new_balance}
+                      New Stock: {m.new_stock != null ? m.new_stock : m.new_balance} units
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                      Prev: {m.previous_stock != null ? m.previous_stock : '—'}
                     </div>
                   </div>
                 </div>

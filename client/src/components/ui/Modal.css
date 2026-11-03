@@ -1,73 +1,70 @@
+/* A dialog is one of the few things that truly floats, so it is one of the few
+ * surfaces with a shadow. No glass: the overlay is a flat scrim. */
+
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6); /* Deeper slate overlay */
-  backdrop-filter: blur(8px); /* Stronger glassmorphism effect */
-  -webkit-backdrop-filter: blur(8px);
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
+  background: rgba(10, 12, 15, 0.55);
   z-index: 1000;
-  padding: var(--space-6);
-  transition: all 0.3s ease;
 }
 
 .modal-content {
-  background-color: var(--bg-surface);
-  border-radius: var(--radius-2xl); /* Softer corners */
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); /* More elevated shadow */
   width: 100%;
-  max-height: 90vh;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle inner border for glass effect */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
 }
 
 .modal-header {
-  padding: var(--space-6) var(--space-6) var(--space-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: none; /* Seamless integration with body */
+  gap: 12px;
+  padding: 18px 20px 14px;
 }
 
 .modal-title {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
   margin: 0;
+  font-size: var(--fs-section);
+  font-weight: 500;
+  color: var(--text);
 }
 
 .modal-close {
-  background: transparent;
-  border: none;
-  font-size: var(--text-2xl);
-  color: var(--text-secondary);
-  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  font-size: 20px;
   line-height: 1;
-  padding: 0 var(--space-1);
-  border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
+  color: var(--muted);
 }
 
 .modal-close:hover {
-  color: var(--text-primary);
-  background-color: var(--bg-surface-active);
+  background: var(--raised);
+  color: var(--text);
 }
 
 .modal-body {
-  padding: 0 var(--space-6) var(--space-6);
+  padding: 4px 20px 20px;
   overflow-y: auto;
 }
 
 .modal-footer {
-  padding: var(--space-5) var(--space-6);
-  border-top: 1px solid var(--border-subtle);
-  background-color: var(--bg-root); /* Slight contrast from body */
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-3);
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--rule);
 }

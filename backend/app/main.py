@@ -7,14 +7,45 @@ from fastapi.exceptions import RequestValidationError
 from backend.app.core.config import settings
 from backend.app.core.errors import AppException
 from backend.app.db.base import Base
-from backend.app.db.session import engine
+from backend.app.db.session import engine, SessionLocal
 from backend.app.models import *  # Ensure all models are registered
+from backend.app.models.customer import Customer
 from backend.app.api.api import api_router
+from backend.app.services.scheme_eligibility_service import scheme_eligibility_service
+from backend.app.core.security import hash_password
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create tables on startup if not already created
+    # 1. Create tables on startup if not already created
     Base.metadata.create_all(bind=engine)
+
+    # 2. Non-destructive migration: Ensure password_hash column exists on customers table
+    with engine.connect() as conn:
+        try:
+            info = conn.exec_driver_sql("PRAGMA table_info(customers)").fetchall()
+            col_names = [r[1] for r in info]
+            if "password_hash" not in col_names:
+                conn.exec_driver_sql("ALTER TABLE customers ADD COLUMN password_hash VARCHAR(255)")
+                conn.commit()
+        except Exception:
+            pass  # For PostgreSQL or if column already exists
+
+    # 3. Seed verified official government schemes and ensure demo customer credentials
+    db = SessionLocal()
+    try:
+        scheme_eligibility_service.ensure_default_schemes_seeded(db)
+
+        # Set default password for existing demo customers if unhashed
+        customers = db.query(Customer).filter(Customer.password_hash == None).all()
+        for c in customers:
+            c.password_hash = hash_password("Customer@12345")
+        if customers:
+            db.commit()
+    except Exception as e:
+        print(f"Startup initialization notice: {e}")
+    finally:
+        db.close()
+
     yield
 
 app = FastAPI(

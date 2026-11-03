@@ -11,6 +11,8 @@ import FinancePage from '../pages/finance/FinancePage';
 import EmployeesPage from '../pages/employees/EmployeesPage';
 import ReportsPage from '../pages/reports/ReportsPage';
 import UsersPage from '../pages/users/UsersPage';
+import CustomerLoginPage from '../pages/portal/CustomerLoginPage';
+import CustomerPortalPage from '../pages/portal/CustomerPortalPage';
 
 // Layout & Guards
 import AppShell from '../components/layout/AppShell';
@@ -19,8 +21,10 @@ import ProtectedRoute from './ProtectedRoute';
 export default function AppRouter() {
   return (
     <Routes>
-      {/* Public Auth Route */}
+      {/* Public Auth Routes */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/portal/login" element={<CustomerLoginPage />} />
+      <Route path="/portal" element={<CustomerPortalPage />} />
 
       {/* Protected App Routes */}
       <Route
@@ -48,6 +52,14 @@ export default function AppRouter() {
           element={
             <ProtectedRoute allowedRoles={['ADMIN', 'OWNER', 'MANAGER']}>
               <PurchasesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="suppliers"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'OWNER', 'MANAGER']}>
+              <PurchasesPage initialTab="suppliers" />
             </ProtectedRoute>
           }
         />

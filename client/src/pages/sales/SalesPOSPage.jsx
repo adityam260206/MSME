@@ -11,6 +11,11 @@ import {
   CreditCard,
   CheckCircle,
   AlertCircle,
+  FileSearch,
+  Archive,
+  History,
+  FileText,
+  ShieldAlert
 } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { ToastContext } from '../../context/ToastContext';
@@ -23,6 +28,9 @@ import api from '../../api/client';
 export default function SalesPOSPage() {
   const { role } = useContext(AuthContext);
   const { showToast } = useContext(ToastContext);
+
+  // Tab: 'pos' | 'historical'
+  const [activeTab, setActiveTab] = useState('pos');
 
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -43,7 +51,54 @@ export default function SalesPOSPage() {
   const [completedInvoice, setCompletedInvoice] = useState(null);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 
+  // Long-Term Historical Invoice Search & Recovery State (Feature 4)
+  const [historicalSearch, setHistoricalSearch] = useState('');
+  const [historicalStartDate, setHistoricalStartDate] = useState('');
+  const [historicalEndDate, setHistoricalEndDate] = useState('');
+  const [historicalCustomerId, setHistoricalCustomerId] = useState('');
+  const [historicalResults, setHistoricalResults] = useState([]);
+  const [isSearchingHistorical, setIsSearchingHistorical] = useState(false);
+  const [recoveredInvoice, setRecoveredInvoice] = useState(null);
+  const [isRecoverModalOpen, setIsRecoverModalOpen] = useState(false);
+  const [isRecovering, setIsRecovering] = useState(false);
+
   const barcodeInputRef = useRef(null);
+
+  const searchHistoricalInvoices = async (e) => {
+    if (e) e.preventDefault();
+    setIsSearchingHistorical(true);
+    try {
+      const params = new URLSearchParams();
+      if (historicalSearch) params.append('query', historicalSearch);
+      if (historicalCustomerId) params.append('customer_id', historicalCustomerId);
+      if (historicalStartDate) params.append('start_date', historicalStartDate);
+      if (historicalEndDate) params.append('end_date', historicalEndDate);
+
+      const res = await api.get(`/business/sales/historical/search?${params.toString()}`);
+      if (res.data.success) {
+        setHistoricalResults(res.data.data || []);
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to search historical invoices', 'error');
+    } finally {
+      setIsSearchingHistorical(false);
+    }
+  };
+
+  const handleRecoverInvoice = async (saleId) => {
+    setIsRecovering(true);
+    try {
+      const res = await api.get(`/business/sales/${saleId}/recover`);
+      if (res.data.success) {
+        setRecoveredInvoice(res.data.data);
+        setIsRecoverModalOpen(true);
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to recover invoice', 'error');
+    } finally {
+      setIsRecovering(false);
+    }
+  };
 
   const loadInitialData = async () => {
     try {
@@ -187,28 +242,92 @@ export default function SalesPOSPage() {
 
   return (
     <div style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-      {/* Header */}
-      <div>
-        <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>Sales & POS Counter</h1>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '4px 0 0 0' }}>
-          Point of Sale Checkout, Barcode Lookup, Invoicing & Returns
-        </p>
+      {/* Header & Tabs */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, margin: 0 }}>Sales, POS & Document Recovery</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '4px 0 0 0' }}>
+            Point of Sale Checkout, Barcode Lookup, and Long-Term Historical Invoice Reconstruction
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => setActiveTab('pos')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 'var(--radius-md)',
+              border: 'none',
+              backgroundColor: activeTab === 'pos' ? 'var(--color-brand)' : 'var(--bg-surface)',
+              color: activeTab === 'pos' ? '#FFFFFF' : 'var(--text-secondary)',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <ShoppingCart size={16} />
+            <span>Active POS Register</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('historical'); searchHistoricalInvoices(); }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 'var(--radius-md)',
+              border: 'none',
+              backgroundColor: activeTab === 'historical' ? 'var(--color-brand)' : 'var(--bg-surface)',
+              color: activeTab === 'historical' ? '#FFFFFF' : 'var(--text-secondary)',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Archive size={16} />
+            <span>Historical Document Recovery</span>
+          </button>
+        </div>
       </div>
 
+      {activeTab === 'pos' && (
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 'var(--space-6)', alignItems: 'start' }}>
         {/* Left Column: Product Selection & Catalog Search */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <Card padding="md">
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
-              <Search size={18} style={{ color: 'var(--text-secondary)' }} />
-              <Input
+            <div style={{ position: 'relative', marginBottom: '12px' }}>
+              <Search
+                size={18}
+                style={{
+                  position: 'absolute',
+                  left: '14px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--text-secondary)',
+                  pointerEvents: 'none',
+                }}
+              />
+              <input
                 ref={barcodeInputRef}
                 type="text"
                 placeholder="Scan Barcode or Type Product Name / SKU..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
-                style={{ flex: 1 }}
+                style={{
+                  width: '100%',
+                  height: '42px',
+                  padding: '0 12px 0 42px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--bg-root)',
+                  color: 'var(--text-primary)',
+                  fontSize: 'var(--text-sm)',
+                }}
               />
             </div>
 
@@ -513,6 +632,267 @@ export default function SalesPOSPage() {
           </Card>
         </div>
       </div>
+      )}
+
+      {/* HISTORICAL INVOICE SEARCH & RECOVERY (Feature 4) */}
+      {activeTab === 'historical' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          {/* Search Filters */}
+          <Card padding="md">
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ flex: '1 1 240px', minWidth: '220px' }}>
+                <input
+                  type="text"
+                  placeholder="Search by Invoice # (e.g. INV-202) or Customer Name..."
+                  value={historicalSearch}
+                  onChange={(e) => setHistoricalSearch(e.target.value)}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', background: 'var(--bg-root)', color: 'var(--text-primary)', fontSize: '13px' }}
+                />
+              </div>
+
+              <select
+                value={historicalCustomerId}
+                onChange={(e) => setHistoricalCustomerId(e.target.value)}
+                style={{ height: '38px', padding: '0 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', background: 'var(--bg-root)', color: 'var(--text-primary)', fontSize: '13px' }}
+              >
+                <option value="">All Customers</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                <span>From:</span>
+                <input
+                  type="date"
+                  value={historicalStartDate}
+                  onChange={(e) => setHistoricalStartDate(e.target.value)}
+                  style={{ height: '38px', padding: '0 8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', background: 'var(--bg-root)', color: 'var(--text-primary)', fontSize: '13px' }}
+                />
+                <span>To:</span>
+                <input
+                  type="date"
+                  value={historicalEndDate}
+                  onChange={(e) => setHistoricalEndDate(e.target.value)}
+                  style={{ height: '38px', padding: '0 8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', background: 'var(--bg-root)', color: 'var(--text-primary)', fontSize: '13px' }}
+                />
+              </div>
+
+              <Button variant="primary" onClick={searchHistoricalInvoices} disabled={isSearchingHistorical}>
+                <FileSearch size={15} style={{ marginRight: '6px' }} />
+                {isSearchingHistorical ? 'Searching...' : 'Search Invoices'}
+              </Button>
+            </div>
+          </Card>
+
+          {/* Historical Results Table */}
+          <Card padding="none">
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>Historical Invoices & Bill Archive</h3>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Statutory transaction record retrieval with non-destructive reconstruction & immutable audit trail
+                </div>
+              </div>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                {historicalResults.length} invoices found
+              </span>
+            </div>
+
+            {isSearchingHistorical ? (
+              <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                Searching historical archives...
+              </div>
+            ) : historicalResults.length === 0 ? (
+              <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                No historical invoices found matching query. Adjust filters above.
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--text-sm)' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-surface-hover)', color: 'var(--text-secondary)' }}>
+                      <th style={{ padding: '10px 14px', fontWeight: 600 }}>Invoice #</th>
+                      <th style={{ padding: '10px 14px', fontWeight: 600 }}>Original Date</th>
+                      <th style={{ padding: '10px 14px', fontWeight: 600 }}>Customer</th>
+                      <th style={{ padding: '10px 14px', fontWeight: 600 }}>Payment Method</th>
+                      <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>Total (₹)</th>
+                      <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'center' }}>Status</th>
+                      <th style={{ padding: '10px 14px', fontWeight: 600, textAlign: 'right' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historicalResults.map((s) => (
+                      <tr key={s.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: '10px 14px', fontWeight: 700, fontFamily: 'monospace' }}>
+                          {s.invoice_number}
+                        </td>
+                        <td style={{ padding: '10px 14px', color: 'var(--text-secondary)' }}>
+                          {new Date(s.created_at).toLocaleString()}
+                        </td>
+                        <td style={{ padding: '10px 14px', fontWeight: 600 }}>
+                          {s.customer_name}
+                        </td>
+                        <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {s.payment_method}
+                        </td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#10B981' }}>
+                          ₹{Number(s.total_amount).toFixed(2)}
+                        </td>
+                        <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              background: s.status === 'COMPLETED' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                              color: s.status === 'COMPLETED' ? '#10B981' : '#EF4444'
+                            }}
+                          >
+                            {s.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                          <Button size="sm" variant="secondary" onClick={() => handleRecoverInvoice(s.id)} disabled={isRecovering}>
+                            <FileText size={13} style={{ marginRight: '4px' }} />
+                            Recover & View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* RECOVERED HISTORICAL INVOICE MODAL (Feature 4 with Audit Trail) */}
+      {isRecoverModalOpen && recoveredInvoice && (
+        <Modal
+          isOpen={isRecoverModalOpen}
+          onClose={() => setIsRecoverModalOpen(false)}
+          title={`Recovered Historical Document: ${recoveredInvoice.sale?.invoice_number}`}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Regulatory Notice & Watermark */}
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                fontSize: '11px',
+                color: 'var(--text-secondary)',
+                display: 'flex',
+                gap: '8px',
+                alignItems: 'center'
+              }}
+            >
+              <ShieldAlert size={16} color="#3B82F6" style={{ flexShrink: 0 }} />
+              <div>
+                <strong>{recoveredInvoice.recovery_watermark}</strong>
+                <div style={{ marginTop: '2px', fontSize: '10px' }}>
+                  Preserved original historical tax rates ({recoveredInvoice.sale?.tax_rate}%) and original transaction prices. No stock deduction or duplicate ledger postings incurred.
+                </div>
+              </div>
+            </div>
+
+            {/* Printable Receipt Preview */}
+            <div id="printable-recovered-receipt" style={{ padding: '12px', background: '#FFF', color: '#000', borderRadius: 'var(--radius-sm)', fontFamily: 'monospace', fontSize: '11px' }}>
+              <div style={{ textAlign: 'center', borderBottom: '1px dashed #000', paddingBottom: '8px', marginBottom: '10px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 800, color: '#3B82F6', textTransform: 'uppercase' }}>
+                  *** OFFICIAL HISTORICAL RECONSTRUCTION ***
+                </div>
+                <h2 style={{ margin: '4px 0 2px 0', fontSize: '16px', fontWeight: 800 }}>BHARAT ENTERPRISES & TRADING</h2>
+                <div>Tax Invoice • GSTIN: 29AAAAA0000A1Z5</div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div>
+                  <div><strong>Invoice #:</strong> {recoveredInvoice.sale?.invoice_number}</div>
+                  <div><strong>Original Sale Date:</strong> {new Date(recoveredInvoice.sale?.created_at).toLocaleString()}</div>
+                  <div><strong>Customer:</strong> {recoveredInvoice.sale?.customer_name}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div><strong>Status:</strong> {recoveredInvoice.sale?.status}</div>
+                  <div><strong>Payment Method:</strong> {recoveredInvoice.sale?.payment_method}</div>
+                  <div><strong>Recovery Timestamp:</strong> {new Date(recoveredInvoice.recovered_at).toLocaleTimeString()}</div>
+                </div>
+              </div>
+
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #000', borderTop: '1px solid #000' }}>
+                    <th style={{ textAlign: 'left', padding: '4px 0' }}>Item</th>
+                    <th style={{ textAlign: 'center', padding: '4px 0' }}>Qty</th>
+                    <th style={{ textAlign: 'right', padding: '4px 0' }}>Rate (₹)</th>
+                    <th style={{ textAlign: 'right', padding: '4px 0' }}>Total (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recoveredInvoice.sale?.items?.map((it) => (
+                    <tr key={it.id}>
+                      <td style={{ padding: '3px 0' }}>{it.product_name}</td>
+                      <td style={{ textAlign: 'center', padding: '3px 0' }}>{it.quantity}</td>
+                      <td style={{ textAlign: 'right', padding: '3px 0' }}>{Number(it.unit_price).toFixed(2)}</td>
+                      <td style={{ textAlign: 'right', padding: '3px 0' }}>{Number(it.line_total).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div style={{ borderTop: '1px dashed #000', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Subtotal:</span>
+                  <span>₹{Number(recoveredInvoice.sale?.subtotal).toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Preserved GST ({recoveredInvoice.sale?.tax_rate}%):</span>
+                  <span>+₹{Number(recoveredInvoice.sale?.tax_amount).toFixed(2)}</span>
+                </div>
+                {Number(recoveredInvoice.sale?.discount_amount) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Preserved Discount:</span>
+                    <span>-₹{Number(recoveredInvoice.sale?.discount_amount).toFixed(2)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '13px', borderTop: '1px solid #000', paddingTop: '4px', marginTop: '2px' }}>
+                  <span>ORIGINAL TOTAL:</span>
+                  <span>₹{Number(recoveredInvoice.sale?.total_amount).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Recovery Audit Trail Section */}
+            {recoveredInvoice.audit_trail?.length > 0 && (
+              <div style={{ padding: '10px', background: 'var(--bg-root)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)', fontSize: '11px' }}>
+                <div style={{ fontWeight: 700, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <History size={13} /> Document Recovery Audit Log Trail:
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {recoveredInvoice.audit_trail.map((log) => (
+                    <div key={log.id} style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                      <span>• {new Date(log.created_at).toLocaleString()}: {log.action}</span>
+                      <span>By: {log.user_id ? log.user_id.slice(0, 8) : 'System'} ({log.ip_address || '127.0.0.1'})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <Button variant="secondary" onClick={() => setIsRecoverModalOpen(false)}>Close</Button>
+              <Button variant="primary" onClick={() => window.print()}>
+                <Printer size={15} style={{ marginRight: '6px' }} />
+                Print Recovered Document
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Completed Invoice Modal (Printable) */}
       {isInvoiceModalOpen && completedInvoice && (

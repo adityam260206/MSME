@@ -10,8 +10,8 @@ export const ThemeContext = createContext(null);
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     // 1. Check local storage
-    const saved = localStorage.getItem('spendsense-theme');
-    if (saved) return saved;
+    const saved = localStorage.getItem('msme360-theme') || localStorage.getItem('spendsense-theme');
+    if (saved === 'dark' || saved === 'light') return saved;
 
     // 2. Check system preference
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -25,6 +25,7 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     // Apply to HTML element so CSS variables propagate
     document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('msme360-theme', theme);
     localStorage.setItem('spendsense-theme', theme);
   }, [theme]);
 
@@ -33,7 +34,7 @@ export function ThemeProvider({ children }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

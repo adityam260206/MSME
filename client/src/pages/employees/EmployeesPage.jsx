@@ -141,7 +141,7 @@ export default function EmployeesPage() {
 
         {canManageHR && (
           <Button variant="primary" onClick={() => handleOpenModal()}>
-            <Plus size={16} style={{ marginRight: '6px' }} />
+            <Plus size={16} />
             Add Employee
           </Button>
         )}

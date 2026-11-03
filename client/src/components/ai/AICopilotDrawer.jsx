@@ -52,7 +52,7 @@ export default function AICopilotDrawer() {
     if (user) {
       api.get('/ai/status')
         .then(res => setCopilotStatus(res.data?.data))
-        .catch(() => setCopilotStatus({ configured: false, model: 'llama-3.3-70b-versatile', provider: 'Groq' }));
+        .catch(() => setCopilotStatus({ configured: false, model: 'openai/gpt-oss-120b', provider: 'Groq' }));
     }
   }, [user]);
 
@@ -148,47 +148,16 @@ export default function AICopilotDrawer() {
     }
   };
 
+  // The copilot is opened from the screen's title row, not from a button that
+  // floats over the work.
+  useEffect(() => {
+    const open = () => setIsOpen((prev) => !prev);
+    window.addEventListener('msme360:copilot', open);
+    return () => window.removeEventListener('msme360:copilot', open);
+  }, []);
+
   return (
     <>
-      {/* Floating Launcher Button */}
-      <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 999 }}>
-        <button
-          onClick={() => setIsOpen(prev => !prev)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '12px 18px',
-            backgroundColor: 'var(--color-brand)',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: 'var(--radius-full)',
-            boxShadow: '0 8px 24px rgba(108, 92, 231, 0.4)',
-            cursor: 'pointer',
-            fontWeight: 600,
-            fontSize: 'var(--text-sm)',
-            transition: 'all 0.2s ease',
-          }}
-          title="Open MSME360 AI Business Copilot"
-        >
-          <Sparkles size={18} />
-          <span>AI Copilot</span>
-          {copilotStatus && (
-            <span
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: copilotStatus.configured ? '#00C896' : '#FFB800',
-                display: 'inline-block',
-                marginLeft: '4px'
-              }}
-              title={copilotStatus.configured ? "Groq LLM Active" : "Grounded DB Fallback Mode"}
-            />
-          )}
-        </button>
-      </div>
-
       {/* Slide-out Drawer */}
       {isOpen && (
         <div

@@ -147,11 +147,11 @@ export default function ReportsPage() {
 
         <div style={{ display: 'flex', gap: '8px' }}>
           <Button variant="secondary" onClick={handleDownloadCSV} disabled={!reportData?.items?.length}>
-            <Download size={15} style={{ marginRight: '6px' }} />
+            <Download size={15} />
             Download CSV
           </Button>
           <Button variant="secondary" onClick={handleDownloadJSON} disabled={!reportData?.items?.length}>
-            <Download size={15} style={{ marginRight: '6px' }} />
+            <Download size={15} />
             Download JSON
           </Button>
         </div>
